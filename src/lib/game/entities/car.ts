@@ -1,6 +1,15 @@
 import { World, Vec2, Circle, Polygon, Box, WheelJoint, Body } from 'planck';
 
 /**
+ * Available drive modes for the car
+ */
+export enum DriveMode {
+  FRONT_WHEEL_DRIVE = 'front',
+  REAR_WHEEL_DRIVE = 'rear',
+  ALL_WHEEL_DRIVE = 'all'
+}
+
+/**
  * Represents a car entity in the game with physics properties and control methods.
  * Handles car creation, physics, and movement controls.
  */
@@ -10,6 +19,10 @@ export class Car {
   private wheelFront: Body;
   private wheelBack: Body;
   private springFront: WheelJoint;
+  private springBack: WheelJoint;
+  
+  // Drive configuration
+  private driveMode: DriveMode = DriveMode.FRONT_WHEEL_DRIVE;
 
   // Control state
   private throttle = 0.0;
@@ -29,6 +42,8 @@ export class Car {
   private readonly THROTTLE_INC_RATE = 0.5;
   private readonly THROTTLE_DEC_RATE = 3.0;
   private readonly BRAKE_STRENGTH = 1.0;
+  private readonly FRONT_WEIGHT_DISTRIBUTION = 0.75; // 75% of weight on front
+  private readonly REAR_WEIGHT_DISTRIBUTION = 0.25; // 25% of weight on rear
   private readonly REVERSE_SPEED_FACTOR = 0.5;
   private readonly REVERSE_TORQUE_FACTOR = 0.7;
   private readonly TOTAL_WEIGHT = this.CHASSIS_WEIGHT + this.MOTOR_WEIGHT;
@@ -49,7 +64,9 @@ export class Car {
     this.wheelBack = wheelBack;
     
     // Create suspension
-    this.springFront = this.createSuspension();
+    const suspensionJoints = this.createSuspension();
+    this.springFront = suspensionJoints.frontJoint;
+    this.springBack = suspensionJoints.backJoint;
   }
 
   /**
@@ -125,28 +142,30 @@ export class Car {
 
   /**
    * Creates the suspension joints connecting the wheels to the car body
-   * @returns The front wheel joint (which has the motor)
+   * @returns Object containing front and back wheel joints
    */
-  private createSuspension(): WheelJoint {
+  private createSuspension(): { frontJoint: WheelJoint, backJoint: WheelJoint } {
     const suspensionAxis = new Vec2(0, 1);
     
-    // Rear suspension (non-motorized)
-    this.world.createJoint(new WheelJoint({
+    // Rear suspension (potentially motorized based on drive mode)
+    const backJoint = this.world.createJoint(new WheelJoint({
       motorSpeed: 0,
       maxMotorTorque: 10.0,
       enableMotor: false,
       frequencyHz: this.SUSPENSION_STIFFNESS,
       dampingRatio: this.SUSPENSION_DAMPING
-    }, this.car, this.wheelBack, this.wheelBack.getPosition(), suspensionAxis));
+    }, this.car, this.wheelBack, this.wheelBack.getPosition(), suspensionAxis))!;
 
-    // Front suspension (motorized)
-    return this.world.createJoint(new WheelJoint({
+    // Front suspension (potentially motorized based on drive mode)
+    const frontJoint = this.world.createJoint(new WheelJoint({
       motorSpeed: 0,
       maxMotorTorque: 20.0,
       enableMotor: true,
       frequencyHz: this.SUSPENSION_STIFFNESS,
       dampingRatio: this.SUSPENSION_DAMPING
     }, this.car, this.wheelFront, this.wheelFront.getPosition(), suspensionAxis))!;
+    
+    return { frontJoint, backJoint };
   }
 
   /**
@@ -174,20 +193,58 @@ export class Car {
     // Motor Control
     if (this.throttle > 0 && !this.braking) {
       const nitroMultiplier = this.nitroActive ? 2.0 : 1.0;
-      let currentEngineTorque = this.throttle * this.ENGINE_TORQUE * nitroMultiplier;
-      const weightFront = 0.75; // 75% of total weight
-      const normalForceFront = totalWeightForce * weightFront;
-      const tractionForceLimit = normalForceFront * this.WHEEL_GRIP;
-      let driveForce = currentEngineTorque / 0.4; // wheelRadius = 0.4
-      if (driveForce > tractionForceLimit) {
-        driveForce = tractionForceLimit;
-        currentEngineTorque = driveForce * 0.4;
-      }
       const targetAngularSpeed = (this.MAX_SPEED * nitroMultiplier) / 0.4;
-      // For forward drive, set motor speed negative
-      this.springFront.setMotorSpeed(-targetAngularSpeed * this.throttle);
-      this.springFront.setMaxMotorTorque(currentEngineTorque);
-      this.springFront.enableMotor(true);
+      const totalEngineTorque = this.throttle * this.ENGINE_TORQUE * nitroMultiplier;
+      
+      // Apply drive based on selected drive mode
+      switch (this.driveMode) {
+        case DriveMode.FRONT_WHEEL_DRIVE:
+          this.applyDriveToWheel(
+            this.springFront, 
+            totalEngineTorque, 
+            targetAngularSpeed, 
+            this.FRONT_WEIGHT_DISTRIBUTION,
+            totalWeightForce
+          );
+          this.springBack.enableMotor(false);
+          break;
+          
+        case DriveMode.REAR_WHEEL_DRIVE:
+          this.applyDriveToWheel(
+            this.springBack, 
+            totalEngineTorque, 
+            targetAngularSpeed, 
+            this.REAR_WEIGHT_DISTRIBUTION,
+            totalWeightForce
+          );
+          this.springFront.enableMotor(false);
+          break;
+          
+        case DriveMode.ALL_WHEEL_DRIVE:
+          {
+          // Split torque between front and rear (60/40)
+          const frontTorque = totalEngineTorque * 0.6;
+          const rearTorque = totalEngineTorque * 0.4;
+          
+          this.applyDriveToWheel(
+            this.springFront, 
+            frontTorque, 
+            targetAngularSpeed, 
+            this.FRONT_WEIGHT_DISTRIBUTION,
+            totalWeightForce
+          );
+          
+          this.applyDriveToWheel(
+            this.springBack, 
+            rearTorque, 
+            targetAngularSpeed, 
+            this.REAR_WEIGHT_DISTRIBUTION,
+            totalWeightForce
+          );
+          break;
+        }
+      }
+      
       this.reverseThrottle = 0;
     } else if (this.braking) {
       if (forwardSpeed < 0.5) {
@@ -203,25 +260,77 @@ export class Car {
           currentEngineTorque = driveForce * 0.4;
         }
         const targetAngularSpeed = reverseMaxSpeed / 0.4;
-        this.springFront.setMotorSpeed(targetAngularSpeed * this.reverseThrottle);
-        this.springFront.setMaxMotorTorque(currentEngineTorque);
-        this.springFront.enableMotor(true);
+        // Apply reverse drive based on selected drive mode
+        switch (this.driveMode) {
+          case DriveMode.FRONT_WHEEL_DRIVE:
+            this.springFront.setMotorSpeed(targetAngularSpeed * this.reverseThrottle);
+            this.springFront.setMaxMotorTorque(currentEngineTorque);
+            this.springFront.enableMotor(true);
+            this.springBack.enableMotor(false);
+            break;
+            
+          case DriveMode.REAR_WHEEL_DRIVE:
+            this.springBack.setMotorSpeed(targetAngularSpeed * this.reverseThrottle);
+            this.springBack.setMaxMotorTorque(currentEngineTorque);
+            this.springBack.enableMotor(true);
+            this.springFront.enableMotor(false);
+            break;
+            
+          case DriveMode.ALL_WHEEL_DRIVE:
+            {
+            // Split torque between front and rear (60/40)
+            const frontTorque = currentEngineTorque * 0.6;
+            const rearTorque = currentEngineTorque * 0.4;
+            
+            this.springFront.setMotorSpeed(targetAngularSpeed * this.reverseThrottle);
+            this.springFront.setMaxMotorTorque(frontTorque);
+            this.springFront.enableMotor(true);
+            
+            this.springBack.setMotorSpeed(targetAngularSpeed * this.reverseThrottle);
+            this.springBack.setMaxMotorTorque(rearTorque);
+            this.springBack.enableMotor(true);
+            break;
+            }
+        }
       } else {
         this.reverseThrottle = 0;
-        this.springFront.setMotorSpeed(0);
-        this.springFront.setMaxMotorTorque(this.ENGINE_TORQUE * this.BRAKE_STRENGTH);
-        this.springFront.enableMotor(true);
+        // Apply braking based on selected drive mode
+        switch (this.driveMode) {
+          case DriveMode.FRONT_WHEEL_DRIVE:
+            this.springFront.setMotorSpeed(0);
+            this.springFront.setMaxMotorTorque(this.ENGINE_TORQUE * this.BRAKE_STRENGTH);
+            this.springFront.enableMotor(true);
+            break;
+            
+          case DriveMode.REAR_WHEEL_DRIVE:
+            this.springBack.setMotorSpeed(0);
+            this.springBack.setMaxMotorTorque(this.ENGINE_TORQUE * this.BRAKE_STRENGTH);
+            this.springBack.enableMotor(true);
+            break;
+            
+          case DriveMode.ALL_WHEEL_DRIVE:
+            this.springFront.setMotorSpeed(0);
+            this.springFront.setMaxMotorTorque(this.ENGINE_TORQUE * this.BRAKE_STRENGTH * 0.6);
+            this.springFront.enableMotor(true);
+            
+            this.springBack.setMotorSpeed(0);
+            this.springBack.setMaxMotorTorque(this.ENGINE_TORQUE * this.BRAKE_STRENGTH * 0.4);
+            this.springBack.enableMotor(true);
+            break;
+        }
       }
     } else {
       this.throttle = 0;
       this.reverseThrottle = 0;
       this.springFront.enableMotor(false);
       this.springFront.setMotorSpeed(0);
+      this.springBack.enableMotor(false);
+      this.springBack.setMotorSpeed(0);
     }
 
     // Apply Aerodynamic Nose-Down Force
     const speed = this.car.getLinearVelocity().length();
-    const downforceCoefficient = 15;
+    const downforceCoefficient = 12;
     const noseDownForceMagnitude = downforceCoefficient * speed * speed;
     const frontOffset = new Vec2(1.0, 0);
     const frontPoint = this.car.getWorldPoint(frontOffset);
@@ -279,6 +388,52 @@ export class Car {
    */
   public onNitroEnd(): void {
     this.nitroActive = false;
+  }
+  
+  /**
+   * Sets the drive mode of the car
+   * @param mode - The drive mode to set
+   */
+  public setDriveMode(mode: DriveMode): void {
+    this.driveMode = mode;
+  }
+  
+  /**
+   * Gets the current drive mode of the car
+   * @returns The current drive mode
+   */
+  public getDriveMode(): DriveMode {
+    return this.driveMode;
+  }
+  
+  /**
+   * Applies drive force to a wheel
+   * @param wheelJoint - The wheel joint to apply force to
+   * @param engineTorque - The engine torque to apply
+   * @param targetAngularSpeed - The target angular speed
+   * @param weightDistribution - The weight distribution for this wheel
+   * @param totalWeightForce - The total weight force of the car
+   */
+  private applyDriveToWheel(
+    wheelJoint: WheelJoint, 
+    engineTorque: number, 
+    targetAngularSpeed: number,
+    weightDistribution: number,
+    totalWeightForce: number
+  ): void {
+    const normalForce = totalWeightForce * weightDistribution;
+    const tractionForceLimit = normalForce * this.WHEEL_GRIP;
+    let driveForce = engineTorque / 0.4; // wheelRadius = 0.4
+    
+    if (driveForce > tractionForceLimit) {
+      driveForce = tractionForceLimit;
+      engineTorque = driveForce * 0.4;
+    }
+    
+    // For forward drive, set motor speed negative
+    wheelJoint.setMotorSpeed(-targetAngularSpeed * this.throttle);
+    wheelJoint.setMaxMotorTorque(engineTorque);
+    wheelJoint.enableMotor(true);
   }
 
   /**

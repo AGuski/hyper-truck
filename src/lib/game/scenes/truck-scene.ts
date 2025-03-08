@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { World, Vec2 } from 'planck';
-import { Car } from '../entities/car';
+import { Car, DriveMode } from '../entities/car';
 import { Terrain } from '../entities/terrain';
 import { PhysicsRenderer } from '../rendering/physics-renderer';
 import { InputController, InputEvent } from '../input/input-controller';
@@ -94,6 +94,11 @@ export class TruckScene extends Phaser.Scene {
     this.inputController.on(InputEvent.BRAKE_END, () => this.car.onBrakeEnd());
     this.inputController.on(InputEvent.NITRO_START, () => this.car.onNitroStart());
     this.inputController.on(InputEvent.NITRO_END, () => this.car.onNitroEnd());
+    
+    // Drive mode switching
+    this.inputController.on(InputEvent.TOGGLE_FRONT_WHEEL_DRIVE, () => this.setDriveMode(DriveMode.FRONT_WHEEL_DRIVE));
+    this.inputController.on(InputEvent.TOGGLE_REAR_WHEEL_DRIVE, () => this.setDriveMode(DriveMode.REAR_WHEEL_DRIVE));
+    this.inputController.on(InputEvent.TOGGLE_ALL_WHEEL_DRIVE, () => this.setDriveMode(DriveMode.ALL_WHEEL_DRIVE));
   }
 
   update(): void {
@@ -154,6 +159,43 @@ export class TruckScene extends Phaser.Scene {
       this.cameras.main.width,
       this.cameras.main.height
     );
+  }
+  
+  /**
+   * Sets the drive mode of the car and updates the UI
+   * @param mode - The drive mode to set
+   */
+  private setDriveMode(mode: DriveMode): void {
+    this.currentDriveMode = mode;
+    this.car.setDriveMode(mode);
+    
+    // Update UI to show current drive mode
+    const driveModeText = {
+      [DriveMode.FRONT_WHEEL_DRIVE]: 'FRONT-WHEEL DRIVE',
+      [DriveMode.REAR_WHEEL_DRIVE]: 'REAR-WHEEL DRIVE',
+      [DriveMode.ALL_WHEEL_DRIVE]: 'ALL-WHEEL DRIVE'
+    }[mode];
+    
+    // Display a temporary message showing the drive mode change
+    const text = this.add.text(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 4,
+      driveModeText,
+      { fontFamily: 'Arial', fontSize: '24px', color: '#ffffff' }
+    );
+    text.setOrigin(0.5);
+    text.setShadow(2, 2, '#000000', 2);
+    
+    // Make the text fade out after 2 seconds
+    this.tweens.add({
+      targets: text,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        text.destroy();
+      }
+    });
   }
   
   /**

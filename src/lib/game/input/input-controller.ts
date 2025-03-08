@@ -9,7 +9,10 @@ export enum InputEvent {
   BRAKE_START = 'brake_start',
   BRAKE_END = 'brake_end',
   NITRO_START = 'nitro_start',
-  NITRO_END = 'nitro_end'
+  NITRO_END = 'nitro_end',
+  TOGGLE_FRONT_WHEEL_DRIVE = 'toggle_front_wheel_drive',
+  TOGGLE_REAR_WHEEL_DRIVE = 'toggle_rear_wheel_drive',
+  TOGGLE_ALL_WHEEL_DRIVE = 'toggle_all_wheel_drive'
 }
 
 /**
@@ -55,6 +58,17 @@ export class InputController {
     }
     if (keyCode === 'ShiftLeft' || keyCode === 'ShiftRight') {
       this.emit(InputEvent.NITRO_START);
+    }
+    
+    // Drive mode switching
+    if (keyCode === 'Digit1') {
+      this.emit(InputEvent.TOGGLE_FRONT_WHEEL_DRIVE);
+    }
+    if (keyCode === 'Digit2') {
+      this.emit(InputEvent.TOGGLE_REAR_WHEEL_DRIVE);
+    }
+    if (keyCode === 'Digit3') {
+      this.emit(InputEvent.TOGGLE_ALL_WHEEL_DRIVE);
     }
   }
   

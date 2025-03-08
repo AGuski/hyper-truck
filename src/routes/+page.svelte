@@ -86,6 +86,10 @@
 				<li>Right Arrow / D Key: Accelerate</li>
 				<li>Left Arrow / A Key: Brake/Reverse</li>
 				<li>Shift: Nitro Boost</li>
+				<li class="mt-2 font-semibold">Drive Modes (Number Keys):</li>
+				<li>1: Front-Wheel Drive</li>
+				<li>2: Rear-Wheel Drive</li>
+				<li>3: All-Wheel Drive</li>
 			</ul>
 			<div class="mt-4 text-sm">
 				<p><strong>Infinite Mode:</strong> Drive as far as you can on procedurally generated terrain.</p>
