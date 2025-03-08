@@ -83,9 +83,9 @@
 		<div class="absolute bottom-4 left-4 bg-gray-900 bg-opacity-80 p-4 rounded-md text-white shadow-lg z-10">
 			<h3 class="font-bold text-lg mb-2">Controls</h3>
 			<ul class="list-disc pl-5 space-y-1">
-				<li>Right Arrow: Accelerate</li>
-				<li>Left Arrow: Brake/Reverse</li>
-				<li>Space: Nitro Boost</li>
+				<li>Right Arrow / D Key: Accelerate</li>
+				<li>Left Arrow / A Key: Brake/Reverse</li>
+				<li>Shift: Nitro Boost</li>
 			</ul>
 			<div class="mt-4 text-sm">
 				<p><strong>Infinite Mode:</strong> Drive as far as you can on procedurally generated terrain.</p>
