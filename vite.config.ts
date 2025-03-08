@@ -10,17 +10,6 @@ export default defineConfig({
     optimizeDeps: {
         include: ['phaser']
     },
-    
-    // Configure build options
-    build: {
-        rollupOptions: {
-            output: {
-                manualChunks: {
-                    'phaser-vendor': ['phaser']
-                }
-            }
-        }
-    },
 
     test: {
         workspace: [{
