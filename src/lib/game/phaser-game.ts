@@ -8,6 +8,7 @@ interface GameConfig {
   parent: HTMLElement;
   width: number;
   height: number;
+  mode?: 'normal' | 'infinite';
 }
 
 /**
