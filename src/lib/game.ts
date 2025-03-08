@@ -5,7 +5,7 @@ import { World, Vec2, Edge, Box, Circle, Polygon, RevoluteJoint, WheelJoint, Tes
  */
 function createTextOverlay(): {
   container: HTMLDivElement;
-  update: (throttleValue: number, speedValue: number, nitroActive: boolean) => void;
+  update: (throttleValue: number, speedValue: number, nitroActive: boolean, timerValue: number | null) => void;
 } {
   const container = document.createElement('div');
   container.style.position = 'absolute';
@@ -23,12 +23,14 @@ function createTextOverlay(): {
   const throttleDisplay = document.createElement('div');
   const speedDisplay = document.createElement('div');
   const nitroDisplay = document.createElement('div');
+  const timerDisplay = document.createElement('div');
   
   container.appendChild(throttleDisplay);
   container.appendChild(speedDisplay);
   container.appendChild(nitroDisplay);
+  container.appendChild(timerDisplay);
   
-  const update = (throttleValue: number, speedValue: number, nitroActive: boolean): void => {
+  const update = (throttleValue: number, speedValue: number, nitroActive: boolean, timerValue: number | null): void => {
     // Format throttle as percentage
     const throttlePercentage = Math.round(throttleValue * 100);
     throttleDisplay.textContent = `Throttle: ${throttlePercentage}%`;
@@ -40,6 +42,16 @@ function createTextOverlay(): {
     // Format nitro status
     const nitroStatus = nitroActive ? 'Active' : 'Inactive';
     nitroDisplay.textContent = `Nitro: ${nitroStatus}`;
+    
+    // Format timer
+    if (timerValue !== null) {
+      const minutes = Math.floor(timerValue / 60);
+      const seconds = Math.floor(timerValue % 60);
+      const milliseconds = Math.floor((timerValue % 1) * 1000);
+      timerDisplay.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
+    } else {
+      timerDisplay.textContent = 'Time: Not started';
+    }
   };
   
   return { container, update };
@@ -48,10 +60,10 @@ function createTextOverlay(): {
 export function initCarSimulation(canvasContainer: HTMLElement): () => void {
   // === TUNING PARAMETERS ===
   const MAX_SPEED            = 80;    // Max linear speed (m/s) at full throttle (forward)
-  const ENGINE_TORQUE        = 4500;   // Engine torque (N·m)
-  const CHASSIS_WEIGHT       = 800;   // Chassis weight (kg)
+  const ENGINE_TORQUE        = 4000;   // Engine torque (N·m)
+  const CHASSIS_WEIGHT       = 900;   // Chassis weight (kg)
   const MOTOR_WEIGHT         = 700;    // Motor weight (kg)
-  const SUSPENSION_STIFFNESS = 3;   // Suspension spring frequency (Hz)
+  const SUSPENSION_STIFFNESS = 2.5;   // Suspension spring frequency (Hz)
   const SUSPENSION_DAMPING   = 0.5;   // Suspension damping ratio (0 to 1)
   const WHEEL_GRIP           = 11.0;   // Tire grip (friction coefficient)
   const THROTTLE_INC_RATE    = 0.5;   // Throttle increase rate (per second)
@@ -59,6 +71,8 @@ export function initCarSimulation(canvasContainer: HTMLElement): () => void {
   const BRAKE_STRENGTH       = 1.0;   // Multiplier for braking torque
   const REVERSE_SPEED_FACTOR = 0.5;   // Reverse max speed is 50% of forward max speed
   const REVERSE_TORQUE_FACTOR= 0.7;   // Reverse engine torque is 70% of forward torque
+
+  const totalWeight = CHASSIS_WEIGHT + MOTOR_WEIGHT;
 
   let nitroActive = false;
   // Nitro multiplier will be calculated dynamically in the step function
@@ -71,9 +85,9 @@ export function initCarSimulation(canvasContainer: HTMLElement): () => void {
   const testbed = Testbed.mount(canvasContainer);
   testbed.width = 30;
   testbed.height = 30;
-  testbed.speed = 1.3;
+  testbed.y = -6;
+  testbed.speed = 1;
   testbed.hz = 50;
-  testbed.info('←/→: (Reserved), ↑/W: Gas, ↓/S: Brake/Reverse');
 
   // Create overlay for throttle and speed indicators
   const overlay = createTextOverlay();
@@ -160,7 +174,7 @@ export function initCarSimulation(canvasContainer: HTMLElement): () => void {
 
   // Bridge
   const bridgeFD = {
-    density: 100.0,
+    density: 150.0,
     friction: 0.6
   };
   let prevBody = ground;
@@ -173,12 +187,21 @@ export function initCarSimulation(canvasContainer: HTMLElement): () => void {
   world.createJoint(new RevoluteJoint({}, prevBody, ground, new Vec2(160 + 2 * 20, -0.125)));
 
   // Boxes - original stack
-  const box = Box(0.5, 0.5);
-  world.createDynamicBody(new Vec2(230, 0.5)).createFixture(box, 0.5);
-  world.createDynamicBody(new Vec2(230, 1.5)).createFixture(box, 0.5);
-  world.createDynamicBody(new Vec2(230, 2.5)).createFixture(box, 0.5);
-  world.createDynamicBody(new Vec2(230, 3.5)).createFixture(box, 0.5);
-  world.createDynamicBody(new Vec2(230, 4.5)).createFixture(box, 0.5);
+  const box = new Box(0.5, 0.5);
+  
+  // Define box properties
+  const boxFixtureDefinition = {
+    density: 0.8,       // Density (affects mass)
+    friction: 0.4,      // Friction coefficient
+    restitution: 0.7    // Bounciness (0 = no bounce, 1 = perfect bounce)
+  };
+  
+  // Create boxes with the specified properties
+  world.createDynamicBody(new Vec2(230, 0.5)).createFixture(box, boxFixtureDefinition);
+  world.createDynamicBody(new Vec2(230, 1.5)).createFixture(box, boxFixtureDefinition);
+  world.createDynamicBody(new Vec2(230, 2.5)).createFixture(box, boxFixtureDefinition);
+  world.createDynamicBody(new Vec2(230, 3.5)).createFixture(box, boxFixtureDefinition);
+  world.createDynamicBody(new Vec2(230, 4.5)).createFixture(box, boxFixtureDefinition);
   
   // Additional boxes on the flat stretch
   // // Pyramid formation
@@ -206,7 +229,7 @@ export function initCarSimulation(canvasContainer: HTMLElement): () => void {
   for (let i = 0; i < 20; i++) {
     const xPos = scatterX + Math.random() * 40;
     const yPos = 0.5 + Math.random() * 3;
-    world.createDynamicBody(new Vec2(xPos, yPos)).createFixture(box, 0.5);
+    world.createDynamicBody(new Vec2(xPos, yPos)).createFixture(box, boxFixtureDefinition);
   }
 
   // === CAR SETUP (Original Car Body Shape) ===
@@ -261,7 +284,7 @@ car.createFixture(heavyEngineShape, {
   wheelFront.setAngularDamping(0.4);
 
   // Adjust wheel density for target mass (20% of chassis mass each)
-  const targetWheelMass = 0.2 * (CHASSIS_WEIGHT + MOTOR_WEIGHT);
+  const targetWheelMass = 0.2 * totalWeight;
   const wheelArea = Math.PI * wheelRadius * wheelRadius;
   const adjustedWheelDensity = targetWheelMass / wheelArea;
   wheelBack.getFixtureList()!.setDensity(adjustedWheelDensity);
@@ -331,6 +354,13 @@ window.addEventListener('keyup', (e: KeyboardEvent) => {
   window.addEventListener('keydown', keyDownHandler);
   window.addEventListener('keyup', keyUpHandler);
 
+  // === TIMER VARIABLES ===
+  let timerStarted = false;
+  let timerValue: number | null = null;
+  let startTime = 0;
+  let endWallHit = false;
+  const endWallPosition = x; // The x position of the end wall
+  
   // === SIMULATION STEP FUNCTION ===
   testbed.step = () => {
     const dt = 1.0 / testbed.hz;
@@ -351,7 +381,7 @@ window.addEventListener('keyup', (e: KeyboardEvent) => {
     const forwardVec = car.getWorldVector(new Vec2(1, 0));
     const forwardSpeed = forwardVec.x * velocity.x + forwardVec.y * velocity.y;
 
-    const totalWeightForce = (CHASSIS_WEIGHT + MOTOR_WEIGHT) * 9.8;
+    const totalWeightForce = totalWeight * 9.8;
 
     // --- Motor Control ---
     if (throttle > 0 && !braking) {
@@ -360,7 +390,6 @@ window.addEventListener('keyup', (e: KeyboardEvent) => {
       const nitroMultiplier = nitroActive ? 2.0 : 1.0;
       
       let currentEngineTorque = throttle * ENGINE_TORQUE * nitroMultiplier;
-      console.log('Current Engine Torque:', currentEngineTorque, 'Nitro Active:', nitroActive, 'Multiplier:', nitroMultiplier);
       
       const weightFront = 0.8; // weight shifts toward front under acceleration (could be multiplied by throttle)
       const normalForceFront = totalWeightForce * weightFront;
@@ -411,12 +440,57 @@ window.addEventListener('keyup', (e: KeyboardEvent) => {
       springFront.setMotorSpeed(0);
     }
 
-    // Update throttle and speed indicators
+    // --- Apply Aerodynamic Nose-Down Force ---
+    // This scales with the square of the speed.
+    const speed = car.getLinearVelocity().length();
+    const downforceCoefficient = 15; // Adjust this value to tune the effect.
+    const noseDownForceMagnitude = downforceCoefficient * speed * speed;
+    // Determine the front point on the car. Adjust the offset as needed.
+    const frontOffset = new Vec2(1.0, 0);
+    const frontPoint = car.getWorldPoint(frontOffset);
+    car.applyForce(new Vec2(0, -noseDownForceMagnitude), frontPoint);
+
+
+    // Apply nose-down force if the car is airborne.
+    const airborneThreshold = 5.5; // Adjust threshold as needed
+    const carPos = car.getPosition();
+    if (carPos.y > airborneThreshold) {
+      console.log('Applying nose-down force');
+      // Get a point near the front of the car (local offset from car center)
+      const frontOffset = new Vec2(1.0, 0);
+      const frontPoint = car.getWorldPoint(frontOffset);
+      // Define the force magnitude; adjust as needed for your simulation
+      console.log(totalWeight* 2 );
+      const noseDownForceMagnitude = ENGINE_TORQUE; //totalWeight* 2 - 100;//3500; // Newtons
+      car.applyForce(new Vec2(0, -noseDownForceMagnitude), frontPoint);
+    }
+
+
+    // Update timer logic
+    const pos = car.getPosition();
+    
+    // Start timer when car first moves
+    if (!timerStarted && Math.abs(forwardSpeed) > 0.1) {
+      timerStarted = true;
+      startTime = performance.now() / 1000; // Convert to seconds
+      timerValue = 0;
+    }
+    
+    // Update timer if started but not ended
+    if (timerStarted && !endWallHit) {
+      timerValue = performance.now() / 1000 - startTime;
+      
+      // Check if car has hit the end wall
+      if (pos.x >= endWallPosition - 2) { // 2 units buffer before the wall
+        endWallHit = true;
+      }
+    }
+    
+    // Update throttle, speed, and timer indicators
     const displayThrottle = braking ? reverseThrottle * -1 : throttle;
-    overlay.update(displayThrottle, forwardSpeed, nitroActive);
+    overlay.update(displayThrottle, forwardSpeed, nitroActive, timerValue);
     
     world.step(dt);
-    const pos = car.getPosition();
     testbed.x = -pos.x;
   };
 
