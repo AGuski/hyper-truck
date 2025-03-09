@@ -1,1 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,100..900;1,100..900&family=Cousine:ital,wght@0,400;0,700;1,400;1,700&family=Jersey+20&family=Reddit+Mono:wght@200..900&display=swap');
 @import 'tailwindcss';
+
+body {
+  font-family: "Cousine", monospace;
+  font-weight: 400;
+  font-style: normal;
+}
+

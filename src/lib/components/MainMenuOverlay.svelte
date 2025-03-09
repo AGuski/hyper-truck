@@ -7,23 +7,27 @@
   let showSettings = $state(false);
   
   // Derived values
-  const buttonClass = $derived(`px-6 py-3 text-lg font-bold rounded-md transition-all duration-200 shadow-lg 
-    hover:shadow-xl hover:scale-105 active:scale-95`);
+  const buttonClass = $derived(`px-3 py-1.5 text-base font-bold transition-all duration-300 shadow-lg 
+    rounded-lg select-none btn-base text-white/90 cursor-pointer`);
   
-  // Use the gradient background for all buttons
-  const primaryButtonClass = $derived(`${buttonClass} gradient-bg text-white`);
-  const secondaryButtonClass = $derived(`${buttonClass} gradient-bg text-white`);
-  const dangerButtonClass = $derived(`${buttonClass} gradient-bg text-white`);
+  // Use gradient text/border with dark background for buttons
+  const primaryButtonClass = $derived(`${buttonClass} gradient-border-primary`);
+  const secondaryButtonClass = $derived(`${buttonClass} gradient-border-secondary`);
+  const dangerButtonClass = $derived(`${buttonClass} gradient-border-danger`);
   
   // Methods
+  // Handle game mode selection
   function startGame(mode: GameMode): void {
-    // Save player name
-    if (playerName.trim() !== $gameState.playerName) {
-      setPlayerName(playerName.trim() || 'Player');
-    }
-    
-    // Set game
     setGameMode(mode);
+  }
+
+  // Handle button clicks
+  function handleCarTuningClick(): void {
+    alert('Car tuning coming soon!');
+  }
+
+  function handleCreditsClick(): void {
+    alert('Credits coming soon');
   }
   
   function toggleSettings(): void {
@@ -52,66 +56,46 @@
   </pre>
   
   <!-- Menu Container -->
-  <div class="rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4 border border-gray-700 backdrop-blur-sm mb-8"> 
-    <!-- Player Name Input -->
-    <div class="mb-6">
-      <label for="playerName" class="block text-gray-300 mb-2 font-medium">Driver Name:</label>
-      <input 
-        type="text" 
-        id="playerName" 
-        bind:value={playerName}
-        class="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="Enter your name"
-      />
-    </div>
-    
+  <div>
     <!-- Game Mode Selection -->
     {#if !showSettings}
-      <div class="space-y-4 mb-8">
-        <h2 class="text-xl font-bold text-gray-200 mb-3">Select Game Mode:</h2>
-        
-        <button 
-          onclick={() => startGame(GameMode.TIME_TRIAL)}
-          class={primaryButtonClass}
-        >
-          <div class="flex flex-col items-start">
-            <span class="text-xl">Time Trial</span>
-            <span class="text-sm opacity-80">Race against the clock on fixed tracks</span>
-          </div>
-        </button>
-        
-        <button 
-          onclick={() => startGame(GameMode.INFINITE)}
-          class={primaryButtonClass}
-        >
-          <div class="flex flex-col items-start">
-            <span class="text-xl">Infinite Mode</span>
-            <span class="text-sm opacity-80">Drive as far as you can on endless terrain</span>
-          </div>
-        </button>
+    <div class="main-menu flex flex-col items-center space-y-4 mt-8">
+      <h2 class="text-2xl font-bold text-gray-200 mb-4 gradient-text">Select Game Mode:</h2>
+      <button 
+        onclick={() => startGame(GameMode.TIME_TRIAL)}
+        class={`${primaryButtonClass} w-72`}
+      >
+        <div class="flex flex-col items-center w-full">
+          <span class="text-lg">Time Trial</span>
+          <span class="text-xs opacity-80">Race against the clock</span>
+        </div>
+      </button>
+
+      <button 
+        onclick={() => startGame(GameMode.INFINITE)}
+        class={`${primaryButtonClass} w-72`}
+      >
+        <div class="flex flex-col items-center w-full">
+          <span class="text-lg">Infinite Mode</span>
+          <span class="text-xs opacity-80">Drive as far as you can</span>
+        </div>
+      </button>
+    </div>
+
+    <button 
+      onclick={handleCarTuningClick}
+      class={`${secondaryButtonClass} fixed bottom-12 left-1/2 -translate-x-1/2 w-48`}
+      style="position: fixed"
+    >
+      <div class="flex flex-col items-center w-full">
+        <span class="text-base">Car Tuning</span>
+        <span class="text-xs opacity-80">Customize your truck</span>
       </div>
-      
-      <!-- Settings Button -->
-      <div class="flex justify-between">
-        <button 
-          onclick={toggleSettings}
-          class={secondaryButtonClass}
-        >
-          Settings
-        </button>
-        
-        <!-- Credits Button - Can be expanded later -->
-        <button 
-          class={secondaryButtonClass}
-        >
-          Credits
-        </button>
-      </div>
+    </button>
     {:else}
       <!-- Settings Panel -->
       <div class="space-y-6 mb-8">
-        <h2 class="text-xl font-bold text-gray-200 mb-3">Game Settings</h2>
-        
+        <h2 class="text-2xl font-bold text-gray-200 mb-4">Game Settings</h2>
         <!-- Sound Settings -->
         <div class="space-y-4">
           <div class="flex items-center justify-between">
@@ -127,7 +111,6 @@
               <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
-          
           <div class="flex items-center justify-between">
             <label for="musicToggle" class="text-gray-300">Background Music</label>
             <label class="relative inline-flex items-center cursor-pointer">
@@ -141,7 +124,6 @@
               <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
-          
           <div class="flex items-center justify-between">
             <label for="savePrefsToggle" class="text-gray-300">Save Preferences</label>
             <label class="relative inline-flex items-center cursor-pointer">
@@ -156,16 +138,14 @@
             </label>
           </div>
         </div>
-        
         <!-- Back Button -->
-        <div class="flex justify-between">
+        <div class="grid grid-cols-2 gap-4 mt-6">
           <button 
             onclick={toggleSettings}
             class={secondaryButtonClass}
           >
             Back to Menu
           </button>
-          
           <!-- Reset Settings Button -->
           <button 
             onclick={() => gameState.update(state => ({ 
@@ -182,22 +162,145 @@
       </div>
     {/if}
   </div>
+  <!-- Settings Button at Bottom Left -->
+  <button 
+    onclick={toggleSettings}
+    class={`${secondaryButtonClass} fixed bottom-4 left-4`}
+    style="position: fixed"
+  >
+    Settings
+  </button>
+  <!-- Credits Button at Bottom Right -->
+  <button 
+    onclick={() => alert('Credits coming soon')}
+    class={`${secondaryButtonClass} fixed bottom-4 right-4 w-24`}
+    style="position: fixed"
+  >
+    Credits
+  </button>
 </div>
 
 <style>
-  /* Reusable gradient background for buttons and other elements */
-  :global(.gradient-bg) {
-    background: linear-gradient(to right, #3b82f6, #8b5cf6);
-    transition: all 0.3s ease;
+  /* CSS Variables for consistent theming */
+  :root {
+    /* Colors */
+    --primary-color-from: #3b82f6;
+    --primary-color-to: #8b5cf6;
+    --secondary-color-from: #64748b;
+    --secondary-color-to: #94a3b8;
+    --danger-color-from: #ef4444;
+    --danger-color-to: #f97316;
+    --bg-dark: rgb(17 24 39 / 0.9);
+    
+    /* Gradients */
+    --primary-gradient: linear-gradient(to right, var(--primary-color-from), var(--primary-color-to));
+    --secondary-gradient: linear-gradient(to right, var(--secondary-color-from), var(--secondary-color-to));
+    --danger-gradient: linear-gradient(to right, var(--danger-color-from), var(--danger-color-to));
+    
+    /* Shadows */
+    --text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --hover-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.2);
+    --active-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    
+    /* Border radius */
+    --border-radius-outer: 0.5rem;
+    --border-radius-inner: 0.375rem;
+    
+    /* Transitions */
+    --transition-normal: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.2s ease;
+    
+    /* Effects */
+    --hover-brightness: brightness(1.3) contrast(1.1);
+    --active-brightness: brightness(0.9);
+    --blur-amount: blur(8px);
   }
-  
-  :global(.gradient-bg:hover) {
-    background: linear-gradient(to right, #2563eb, #7c3aed);
+
+  /* Button base styles */
+  :global(.btn-base) {
+    position: relative;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    background-color: var(--bg-dark);
+    transition: var(--transition-normal);
+    backdrop-filter: var(--blur-amount);
+    text-shadow: var(--text-shadow);
+    letter-spacing: 0.025em;
+  }
+
+  /* Common pseudo-element for all buttons */
+  :global(.btn-base::before) {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    z-index: -1;
+    border-radius: var(--border-radius-outer);
+    transition: var(--transition-fast);
+  }
+
+  /* Button type-specific gradients */
+  :global(.gradient-border-primary::before) {
+    background: var(--primary-gradient);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), inset 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  :global(.gradient-border-secondary::before) {
+    background: var(--secondary-gradient);
+    box-shadow: 0 0 20px rgba(100, 116, 139, 0.5), inset 0 0 20px rgba(100, 116, 139, 0.3);
+  }
+
+  :global(.gradient-border-danger::before) {
+    background: var(--danger-gradient);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.3);
+  }
+
+  /* Common hover state */
+  :global(.btn-base:hover) {
+    transform: translateY(-2px);
+    box-shadow: var(--hover-shadow);
+  }
+
+  /* Button type-specific hover states */
+  :global(.gradient-border-primary:hover::before) {
+    filter: var(--hover-brightness);
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.7), inset 0 0 30px rgba(59, 130, 246, 0.4);
+  }
+
+  :global(.gradient-border-secondary:hover::before) {
+    filter: var(--hover-brightness);
+    box-shadow: 0 0 30px rgba(100, 116, 139, 0.7), inset 0 0 30px rgba(100, 116, 139, 0.4);
+  }
+
+  :global(.gradient-border-danger:hover::before) {
+    filter: var(--hover-brightness);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.7), inset 0 0 30px rgba(239, 68, 68, 0.4);
+  }
+
+  /* Common active state */
+  :global(.btn-base:active) {
+    transform: translateY(1px);
+    box-shadow: var(--active-shadow);
+  }
+
+  /* Button type-specific active states */
+  :global(.gradient-border-primary:active::before) {
+    filter: var(--active-brightness);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4), inset 0 0 15px rgba(59, 130, 246, 0.2);
+  }
+
+  :global(.gradient-border-secondary:active::before) {
+    filter: var(--active-brightness);
+    box-shadow: 0 0 15px rgba(100, 116, 139, 0.4), inset 0 0 15px rgba(100, 116, 139, 0.2);
+  }
+
+  :global(.gradient-border-danger:active::before) {
+    filter: var(--active-brightness);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 15px rgba(239, 68, 68, 0.2);
   }
   
   /* Gradient text for ASCII art title */
   :global(.gradient-text) {
-    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+    background: var(--primary-gradient);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -218,10 +321,10 @@
     font-weight: bold;
   }
   
-  /* GitHub link glow effect */
+  /* GitHub link styles */
   .github-link {
     position: relative;
-    transition: all 0.3s ease;
+    transition: var(--transition-fast);
   }
 
   .github-link:hover {

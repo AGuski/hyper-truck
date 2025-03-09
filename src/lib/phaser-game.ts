@@ -38,18 +38,28 @@ function startSceneForGameMode(game: Phaser.Game, mode: GameMode): void {
   
   console.log(`Switching to game mode: ${mode}, scene: ${sceneKey}`);
   
-  // Stop all active scenes first
-  Object.values(SCENE_MAP).forEach(key => {
-    if (game.scene.isActive(key)) {
-      console.log(`Stopping scene: ${key}`);
-      game.scene.sleep(key);
+  // Handle active scenes
+  Object.entries(SCENE_MAP).forEach(([gameMode, key]) => {
+    const scene = game.scene.getScene(key);
+    if (scene && game.scene.isActive(key)) {
+      console.log(`Handling scene: ${key}`);
+      if (key === SCENE_MAP[GameMode.MENU]) {
+        // Only sleep the menu background scene
+        console.log(`Sleeping MenuBackgroundScene: ${key}`);
+        game.scene.sleep(key);
+      } else {
+        // Destroy other scenes
+        console.log(`Destroying scene: ${key}`);
+        game.scene.remove(key);
+        // Re-add the scene to the manager
+        game.scene.add(key, gameMode === GameMode.TIME_TRIAL ? TimeTrialScene : InfiniteModeScene);
+      }
     }
   });
-
-  console.log(game.scene.getScene(sceneKey));
   
   // Start the new scene if it exists
-  if (game.scene.getScene(sceneKey)) {
+  const targetScene = game.scene.getScene(sceneKey);
+  if (targetScene) {
     if (game.scene.isSleeping(sceneKey)) {
       console.log(`Waking scene: ${sceneKey}`);
       game.scene.wake(sceneKey);
