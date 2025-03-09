@@ -4,6 +4,7 @@ import { Car, DriveMode } from '../entities/car';
 import { ProceduralTerrain } from '../entities/procedural-terrain';
 import { PhysicsRenderer } from '../rendering/physics-renderer';
 import { InputController, InputEvent } from '../input/input-controller';
+import { PhysicsSystem } from '../physics/physics-system';
 
 /**
  * Scene for the infinite mode where terrain is procedurally generated as the player drives.
@@ -25,7 +26,7 @@ export class InfiniteModeScene extends Phaser.Scene {
   private startPosition = new Vec2(0, 0);
   private gameStarted = false;
 
-  private readonly dt = 1 / 50; // Simulation timestep (50 Hz)
+  private physicsSystem!: PhysicsSystem;
   
   constructor() {
     super({ key: 'InfiniteModeScene' });
@@ -70,6 +71,9 @@ export class InfiniteModeScene extends Phaser.Scene {
 
     // --- Initialize Planck.js world ---
     this.world = new World({ gravity: new Vec2(0, -9.8) });
+    
+    // --- Initialize physics system ---
+    this.physicsSystem = new PhysicsSystem();
 
     // --- Create procedural terrain ---
     this.terrain = new ProceduralTerrain(this.world);
@@ -99,12 +103,12 @@ export class InfiniteModeScene extends Phaser.Scene {
     this.showInstructions();
   }
 
-  update(): void {
-    // --- Use a fixed timestep ---
-    const dt = this.dt;
+  update(time: number, delta: number): void {
+    // Convert delta from ms to seconds
+    const deltaSeconds = delta / 1000;
     
-    // Update car physics
-    this.car.update(dt);
+    // Update physics using the physics system
+    this.physicsSystem.update(this.world, this.car, deltaSeconds);
     
     // Get car position and speed for other game logic
     const carPos = this.car.getPosition();
@@ -123,9 +127,6 @@ export class InfiniteModeScene extends Phaser.Scene {
     if (this.gameStarted) {
       this.distanceTraveled = carPos.x - this.startPosition.x;
     }
-
-    // --- Step the physics world ---
-    this.world.step(dt);
 
     // --- Update overlay text ---
     const displayThrottle = this.car.isBraking() ? this.car.getReverseThrottle() * -1 : this.car.getThrottle();

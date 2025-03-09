@@ -4,6 +4,7 @@ import { Car, DriveMode } from '../entities/car';
 import { Terrain } from '../entities/terrain';
 import { PhysicsRenderer } from '../rendering/physics-renderer';
 import { InputController, InputEvent } from '../input/input-controller';
+import { PhysicsSystem } from '../physics/physics-system';
 
 export class TimeTrialScene extends Phaser.Scene {
   // --- Simulation & Rendering Properties ---
@@ -24,7 +25,7 @@ export class TimeTrialScene extends Phaser.Scene {
   private endWallHit = false;
   private endWallPosition = 0;   // x position of the end wall
 
-  private readonly dt = 1 / 50; // Simulation timestep (50 Hz)
+  private physicsSystem!: PhysicsSystem;
   
 
   constructor() {
@@ -70,6 +71,9 @@ export class TimeTrialScene extends Phaser.Scene {
 
     // --- Initialize Planck.js world ---
     this.world = new World({ gravity: new Vec2(0, -9.8) });
+    
+    // --- Initialize physics system ---
+    this.physicsSystem = new PhysicsSystem();
 
     // --- Create terrain ---
     this.terrain = new Terrain(this.world);
@@ -101,12 +105,12 @@ export class TimeTrialScene extends Phaser.Scene {
     this.inputController.on(InputEvent.TOGGLE_ALL_WHEEL_DRIVE, () => this.setDriveMode(DriveMode.ALL_WHEEL_DRIVE));
   }
 
-  update(): void {
-    // --- Use a fixed timestep ---
-    const dt = this.dt;
+  update(time: number, delta: number): void {
+    // Convert delta from ms to seconds
+    const deltaSeconds = delta / 1000;
     
-    // Update car physics
-    this.car.update(dt);
+    // Update physics using the physics system
+    this.physicsSystem.update(this.world, this.car, deltaSeconds);
     
     // Get car position and speed for other game logic
     const carPos = this.car.getPosition();
@@ -124,9 +128,6 @@ export class TimeTrialScene extends Phaser.Scene {
         this.endWallHit = true;
       }
     }
-
-    // --- Step the physics world ---
-    this.world.step(dt);
 
     // --- Update overlay text ---
     const displayThrottle = this.car.isBraking() ? this.car.getReverseThrottle() * -1 : this.car.getThrottle();
