@@ -2,7 +2,12 @@
 	import { createPhaserGame } from '$lib/phaser-game';
 	import { GameMode, gameState, setGameMode } from '$lib/stores/game-state-store';
 	import MainMenuOverlay from '$lib/components/MainMenuOverlay.svelte';
-    import { onMount } from 'svelte';
+	import { onMount } from 'svelte';
+
+	// Button styles matching MainMenuOverlay
+	const buttonClass = $derived(`px-3 py-1.5 text-base font-bold transition-all duration-300 shadow-lg 
+		rounded-lg select-none btn-base text-white/90 cursor-pointer`);
+	const secondaryButtonClass = $derived(`${buttonClass} gradient-border-secondary`);
 	
 	let gameContainer = $state<HTMLDivElement | undefined>();
 	let cleanup = $state<(() => void) | null>(null);
@@ -70,7 +75,7 @@
 		{#if $gameState.currentMode !== GameMode.MENU}
 			<button 
 				onclick={() => setGameMode(GameMode.MENU)}
-				class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md transition-colors shadow-lg"
+				class={secondaryButtonClass}
 			>
 				Main Menu
 			</button>
@@ -111,5 +116,26 @@
 		padding: 0;
 		height: 100%;
 		width: 100%;
+	}
+
+	/* Button gradient styles matching MainMenuOverlay */
+	:global(.gradient-border-secondary) {
+		background: rgb(17 24 39 / 0.9);
+		border: 2px solid transparent;
+		background-clip: padding-box;
+		position: relative;
+	}
+
+	:global(.gradient-border-secondary::before) {
+		content: '';
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		z-index: -1;
+		margin: -2px;
+		border-radius: inherit;
+		background: linear-gradient(to right, #64748b, #94a3b8);
 	}
 </style>

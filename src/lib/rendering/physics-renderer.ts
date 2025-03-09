@@ -8,7 +8,7 @@ import { Car } from '../entities/car';
  * Encapsulates all drawing logic to keep scene classes focused on game logic.
  */
 export class PhysicsRenderer {
-  private readonly SCALE: number = 50; // Pixels per meter
+  private readonly SCALE: number = 50;// Pixels per meter
   private currentZoom: number = 0.5;   // Current camera zoom level
   private graphics: Phaser.GameObjects.Graphics;
   private targetCameraY: number = 0;   // Target Y position for camera
