@@ -37,9 +37,6 @@ export class MenuBackgroundScene extends Phaser.Scene {
   create(): void {
     // --- Set background color ---
     this.cameras.main.setBackgroundColor('#111111');
-    
-    // --- Configure camera for high-DPI displays ---
-    this.cameras.main.setRoundPixels(true);
 
     // --- Create a Graphics object for drawing the simulation ---
     this.graphics = this.add.graphics({
@@ -183,11 +180,6 @@ export class MenuBackgroundScene extends Phaser.Scene {
 
       // Reset car to a position ahead of the current position
       // For menu background, we want to reset further ahead to avoid seeing the reset
-      console.log('Reset due to:');
-      if (isFlipped) console.log('Flipped - time:', this.timeWhileFlipped);
-      if (isFallen) console.log('Fallen - time:', this.timeWhileFallen);
-      if (isStuck) console.log('Stuck - time:', this.timeAtLowSpeed);
-      
       // Calculate reset position
       const resetX = carPos.x + 20;
       // Get the terrain height at the reset position and place the car slightly above it

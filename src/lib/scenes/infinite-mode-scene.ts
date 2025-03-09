@@ -39,9 +39,6 @@ export class InfiniteModeScene extends Phaser.Scene {
   create(): void {
     // --- Set background color ---
     this.cameras.main.setBackgroundColor('#111111');
-    
-    // --- Configure camera for high-DPI displays ---
-    this.cameras.main.setRoundPixels(true);
 
     // --- Create overlay text (to display throttle, speed, nitro, distance) ---
     this.overlayText = this.add.text(10, 10, '', {
