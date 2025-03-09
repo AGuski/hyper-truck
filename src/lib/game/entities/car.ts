@@ -32,8 +32,8 @@ export class Car {
   private nitroActive = false;
 
   // Constants and tuning parameters
-  private readonly MAX_SPEED = 80;
-  private readonly ENGINE_TORQUE = 4000;
+  private readonly MAX_SPEED = 130; // 80
+  private readonly ENGINE_TORQUE = 4500; // 4000
   private readonly CHASSIS_WEIGHT = 900;
   private readonly MOTOR_WEIGHT = 700;
   private readonly SUSPENSION_STIFFNESS = 2.5; 
