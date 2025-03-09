@@ -63,25 +63,27 @@
     {#if !showSettings && !showTuning}
     <div class="main-menu flex flex-col items-center space-y-4 mt-8">
       <h2 class="text-2xl font-bold text-gray-200 mb-4 gradient-text">Select Game Mode:</h2>
-      <button 
-        onclick={() => startGame(GameMode.TIME_TRIAL)}
-        class={`${primaryButtonClass} w-72`}
-      >
-        <div class="flex flex-col items-center w-full">
-          <span class="text-lg">Time Trial</span>
-          <span class="text-xs opacity-80">Race against the clock</span>
-        </div>
-      </button>
+      <div class="flex justify-center space-x-4">
+        <button 
+          onclick={() => startGame(GameMode.TIME_TRIAL)}
+          class={`${primaryButtonClass} w-72`}
+        >
+          <div class="flex flex-col items-center w-full">
+            <span class="text-lg">Time Trial</span>
+            <span class="text-xs opacity-80">Race against the clock</span>
+          </div>
+        </button>
 
-      <button 
-        onclick={() => startGame(GameMode.INFINITE)}
-        class={`${primaryButtonClass} w-72`}
-      >
-        <div class="flex flex-col items-center w-full">
-          <span class="text-lg">Infinite Mode</span>
-          <span class="text-xs opacity-80">Drive as far as you can</span>
-        </div>
-      </button>
+        <button 
+          onclick={() => startGame(GameMode.INFINITE)}
+          class={`${primaryButtonClass} w-72`}
+        >
+          <div class="flex flex-col items-center w-full">
+            <span class="text-lg">Infinite Mode</span>
+            <span class="text-xs opacity-80">Drive as far as you can</span>
+          </div>
+        </button>
+      </div>
     </div>
 
     <button 
