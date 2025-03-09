@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { TruckScene } from './scenes/truck-scene';
+import { TimeTrialScene } from './scenes/time-trial-scene';
+import { InfiniteModeScene } from './scenes/infinite-mode-scene';
 
 /**
  * Configuration interface for the Phaser game
@@ -8,7 +9,7 @@ interface GameConfig {
   parent: HTMLElement;
   width: number;
   height: number;
-  mode?: 'normal' | 'infinite';
+  mode?: 'time-trial' | 'infinite';
 }
 
 /**
@@ -26,7 +27,7 @@ export function createPhaserGame(config: GameConfig): () => void {
     width: config.width*dpiRatio,
     height: config.height*dpiRatio,
     backgroundColor: '#111111',
-    scene: [TruckScene],
+    scene: [config.mode === 'time-trial' ? TimeTrialScene : InfiniteModeScene],
     // Basic rendering settings for sharper display
     roundPixels: true,
     antialias: true,

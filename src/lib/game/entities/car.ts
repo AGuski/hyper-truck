@@ -36,7 +36,7 @@ export class Car {
   private readonly ENGINE_TORQUE = 4000;
   private readonly CHASSIS_WEIGHT = 900;
   private readonly MOTOR_WEIGHT = 700;
-  private readonly SUSPENSION_STIFFNESS = 2.5;
+  private readonly SUSPENSION_STIFFNESS = 2.5; 
   private readonly SUSPENSION_DAMPING = 0.5;
   private readonly WHEEL_GRIP = 11.0;
   private readonly THROTTLE_INC_RATE = 0.5;

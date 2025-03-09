@@ -1,11 +1,14 @@
 import Phaser from 'phaser';
 import { World, Vec2 } from 'planck';
 import { Car, DriveMode } from '../entities/car';
-import { Terrain } from '../entities/terrain';
+import { ProceduralTerrain } from '../entities/procedural-terrain';
 import { PhysicsRenderer } from '../rendering/physics-renderer';
 import { InputController, InputEvent } from '../input/input-controller';
 
-export class TruckScene extends Phaser.Scene {
+/**
+ * Scene for the infinite mode where terrain is procedurally generated as the player drives.
+ */
+export class InfiniteModeScene extends Phaser.Scene {
   // --- Simulation & Rendering Properties ---
   private world!: World;
   private graphics!: Phaser.GameObjects.Graphics;
@@ -14,21 +17,18 @@ export class TruckScene extends Phaser.Scene {
 
   // --- Game entities ---
   private car!: Car;
-  private terrain!: Terrain;
+  private terrain!: ProceduralTerrain;
   private inputController!: InputController;
   
   // --- Simulation state variables ---
-  private timerStarted = false;
-  private timerValue: number | null = null;
-  private startTime = 0;
-  private endWallHit = false;
-  private endWallPosition = 0;   // x position of the end wall
+  private distanceTraveled = 0;
+  private startPosition = new Vec2(0, 0);
+  private gameStarted = false;
 
   private readonly dt = 1 / 50; // Simulation timestep (50 Hz)
   
-
   constructor() {
-    super({ key: 'TruckScene' });
+    super({ key: 'InfiniteModeScene' });
   }
 
   preload(): void {
@@ -42,7 +42,7 @@ export class TruckScene extends Phaser.Scene {
     // --- Configure camera for high-DPI displays ---
     this.cameras.main.setRoundPixels(true);
 
-    // --- Create overlay text (to display throttle, speed, nitro, timer) ---
+    // --- Create overlay text (to display throttle, speed, nitro, distance) ---
     this.overlayText = this.add.text(10, 10, '', {
       fontFamily: 'monospace',
       fontSize: '28px',
@@ -71,18 +71,13 @@ export class TruckScene extends Phaser.Scene {
     // --- Initialize Planck.js world ---
     this.world = new World({ gravity: new Vec2(0, -9.8) });
 
-    // --- Create terrain ---
-    this.terrain = new Terrain(this.world);
+    // --- Create procedural terrain ---
+    this.terrain = new ProceduralTerrain(this.world);
 
     // === CAR SETUP ===
     // Create the car at position (0, 1)
     this.car = new Car(this.world, new Vec2(0, 1));
-
-    // --- TIMER VARIABLES ---
-    this.timerStarted = false;
-    this.timerValue = null;
-    this.endWallHit = false;
-    this.endWallPosition = this.terrain.getEndWallPosition();
+    this.startPosition = this.car.getPosition().clone();
 
     // --- Initialize the input controller ---
     this.inputController = new InputController(this);
@@ -99,6 +94,9 @@ export class TruckScene extends Phaser.Scene {
     this.inputController.on(InputEvent.TOGGLE_FRONT_WHEEL_DRIVE, () => this.setDriveMode(DriveMode.FRONT_WHEEL_DRIVE));
     this.inputController.on(InputEvent.TOGGLE_REAR_WHEEL_DRIVE, () => this.setDriveMode(DriveMode.REAR_WHEEL_DRIVE));
     this.inputController.on(InputEvent.TOGGLE_ALL_WHEEL_DRIVE, () => this.setDriveMode(DriveMode.ALL_WHEEL_DRIVE));
+    
+    // Show initial instructions
+    this.showInstructions();
   }
 
   update(): void {
@@ -112,17 +110,18 @@ export class TruckScene extends Phaser.Scene {
     const carPos = this.car.getPosition();
     const forwardSpeed = this.car.getForwardSpeed();
 
-    // --- Timer logic ---
-    if (!this.timerStarted && Math.abs(forwardSpeed) > 0.1) {
-      this.timerStarted = true;
-      this.startTime = performance.now() / 1000;
-      this.timerValue = 0;
+    // --- Game start logic ---
+    if (!this.gameStarted && Math.abs(forwardSpeed) > 0.1) {
+      this.gameStarted = true;
+      this.startPosition = carPos.clone();
     }
-    if (this.timerStarted && !this.endWallHit) {
-      this.timerValue = performance.now() / 1000 - this.startTime;
-      if (carPos.x >= this.endWallPosition - 2) {
-        this.endWallHit = true;
-      }
+
+    // --- Update the procedural terrain based on car position ---
+    this.terrain.update(carPos.x);
+    
+    // --- Calculate distance traveled ---
+    if (this.gameStarted) {
+      this.distanceTraveled = carPos.x - this.startPosition.x;
     }
 
     // --- Step the physics world ---
@@ -131,17 +130,18 @@ export class TruckScene extends Phaser.Scene {
     // --- Update overlay text ---
     const displayThrottle = this.car.isBraking() ? this.car.getReverseThrottle() * -1 : this.car.getThrottle();
     const throttlePercentage = Math.round(displayThrottle * 100);
-    const speedFormatted = forwardSpeed.toFixed(2);
+    
+    // Convert speed from m/s to km/h (multiply by 3.6)
+    // Use Math.abs for very small values to prevent -0.0 display
+    const speedKmh = Math.abs(forwardSpeed) < 0.05 ? 0 : forwardSpeed * 3.6;
+    const speedFormatted = speedKmh.toFixed(1);
+    
     const nitroStatus = this.car.isNitroActive() ? 'Active' : 'Inactive';
-    let timerStr = 'Not started';
-    if (this.timerValue !== null) {
-      const minutes = Math.floor(this.timerValue / 60);
-      const seconds = Math.floor(this.timerValue % 60);
-      const milliseconds = Math.floor((this.timerValue % 1) * 1000);
-      timerStr = `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
-    }
+    const distanceFormatted = this.distanceTraveled.toFixed(1);
+    const driveMode = this.getDriveModeText(this.car.getDriveMode());
+    
     this.overlayText.setText(
-      `Throttle: ${throttlePercentage}%\nSpeed: ${speedFormatted} m/s\nNitro: ${nitroStatus}\nTime: ${timerStr}`
+      `Throttle: ${throttlePercentage}%\nSpeed: ${speedFormatted} km/h\nNitro: ${nitroStatus}\nDistance: ${distanceFormatted} m\nDrive: ${driveMode}`
     );
     
     // --- Update camera zoom based on speed ---
@@ -166,15 +166,10 @@ export class TruckScene extends Phaser.Scene {
    * @param mode - The drive mode to set
    */
   private setDriveMode(mode: DriveMode): void {
-    this.currentDriveMode = mode;
     this.car.setDriveMode(mode);
     
     // Update UI to show current drive mode
-    const driveModeText = {
-      [DriveMode.FRONT_WHEEL_DRIVE]: 'FRONT-WHEEL DRIVE',
-      [DriveMode.REAR_WHEEL_DRIVE]: 'REAR-WHEEL DRIVE',
-      [DriveMode.ALL_WHEEL_DRIVE]: 'ALL-WHEEL DRIVE'
-    }[mode];
+    const driveModeText = this.getDriveModeText(mode);
     
     // Display a temporary message showing the drive mode change
     const text = this.add.text(
@@ -195,6 +190,58 @@ export class TruckScene extends Phaser.Scene {
       onComplete: () => {
         text.destroy();
       }
+    });
+  }
+  
+  /**
+   * Gets the display text for a drive mode
+   * @param mode - The drive mode
+   * @returns The display text for the drive mode
+   */
+  private getDriveModeText(mode: DriveMode): string {
+    return {
+      [DriveMode.FRONT_WHEEL_DRIVE]: 'FRONT-WHEEL DRIVE',
+      [DriveMode.REAR_WHEEL_DRIVE]: 'REAR-WHEEL DRIVE',
+      [DriveMode.ALL_WHEEL_DRIVE]: 'ALL-WHEEL DRIVE'
+    }[mode];
+  }
+  
+  /**
+   * Shows the game instructions at the start
+   */
+  private showInstructions(): void {
+    const instructions = this.add.text(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2.5,
+      'INFINITE MODE\n\nDrive as far as you can on procedurally generated terrain.\n\nUse RIGHT ARROW or D to accelerate\nUse LEFT ARROW or A to brake\nUse SHIFT for nitro boost\nPress 1-3 to change drive modes\n\nPress any key to start!',
+      { 
+        fontFamily: 'Arial', 
+        fontSize: '24px', 
+        color: '#ffffff',
+        align: 'center'
+      }
+    );
+    instructions.setOrigin(0.5);
+    instructions.setShadow(2, 2, '#000000', 2);
+    
+    // Make the instructions fade out when the game starts
+    this.events.once('update', () => {
+      const checkStart = () => {
+        if (this.gameStarted) {
+          this.tweens.add({
+            targets: instructions,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => {
+              instructions.destroy();
+            }
+          });
+        } else {
+          this.events.once('update', checkStart);
+        }
+      };
+      this.events.once('update', checkStart);
     });
   }
   

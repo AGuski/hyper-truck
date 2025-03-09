@@ -3,7 +3,7 @@
 	
 	let gameContainer = $state<HTMLDivElement | undefined>();
 	let cleanup = $state<(() => void) | null>(null);
-	let gameMode = $state<'normal' | 'infinite'>('normal');
+	let gameMode = $state<'time-trial' | 'infinite'>('infinite');
 	let showControls = $state(false);
 	
 	const gameContainerClass = $derived('w-screen h-screen bg-gray-900 relative');
@@ -29,7 +29,7 @@
 	
 	// Toggle game mode
 	function toggleGameMode(): void {
-		gameMode = gameMode === 'normal' ? 'infinite' : 'normal';
+		gameMode = gameMode === 'time-trial' ? 'infinite' : 'time-trial';
 		restartGame();
 	}
 	
@@ -63,12 +63,12 @@
 >
 	<!-- Game UI Overlay -->
 	<div class="absolute top-4 right-4 flex flex-col gap-2 z-10">
-		<!-- <button 
+		<button 
 			onclick={toggleGameMode}
 			class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md transition-colors shadow-lg"
 		>
-			{gameMode === 'normal' ? 'Switch to Infinite Mode' : 'Switch to Normal Mode'}
-		</button> -->
+			{gameMode === 'time-trial' ? 'Switch to Infinite Mode' : 'Switch to Time Trial Mode'}
+		</button>
 		
 		<button 
 			onclick={toggleControls}

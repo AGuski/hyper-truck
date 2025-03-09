@@ -11,6 +11,8 @@ export class PhysicsRenderer {
   private readonly SCALE: number = 50; // Pixels per meter
   private currentZoom: number = 0.5;   // Current camera zoom level
   private graphics: Phaser.GameObjects.Graphics;
+  private targetCameraY: number = 0;   // Target Y position for camera
+  private currentCameraY: number = 0;  // Current Y position for camera
   
   /**
    * Creates a new PhysicsRenderer instance
@@ -18,6 +20,8 @@ export class PhysicsRenderer {
    */
   constructor(graphics: Phaser.GameObjects.Graphics) {
     this.graphics = graphics;
+    this.targetCameraY = 0;
+    this.currentCameraY = 0;
   }
   
   /**
@@ -65,13 +69,19 @@ export class PhysicsRenderer {
     const centerY = Math.round(cameraHeight / 2);
     const carWorldPos = car.getPosition();
     
+    // Update target camera Y position based on car's Y position
+    this.targetCameraY = carWorldPos.y;
+    
+    // Smoothly interpolate current camera Y position towards target
+    this.updateCameraY(0.015); // low lerp factor for smooth camera movement
+    
     // Create a world-to-screen coordinate transformation function
     const worldToScreen = (vec: Vec2) => ({
       // Round to exact pixels for sharper rendering
       // Only follow the car on X axis, apply zoom factor
       x: Math.round(centerX + (vec.x - carWorldPos.x) * this.SCALE * this.currentZoom),
-      // Fixed Y position - use absolute world coordinates, apply zoom factor
-      y: Math.round(centerY - vec.y * this.SCALE * this.currentZoom + cameraHeight * 0.25)
+      // Smooth Y follow with offset - interpolate towards car's Y position
+      y: Math.round(centerY - (vec.y - this.currentCameraY) * this.SCALE * this.currentZoom + cameraHeight * 0.2)
     });
 
     // Render each body in the world
@@ -255,5 +265,15 @@ export class PhysicsRenderer {
   public updateZoom(targetZoom: number, lerpFactor: number = 0.02): number {
     this.currentZoom = this.currentZoom + (targetZoom - this.currentZoom) * lerpFactor;
     return this.currentZoom;
+  }
+  
+  /**
+   * Smoothly updates the current camera Y position towards the target Y position
+   * @param lerpFactor - Interpolation factor (0-1, higher = faster transition)
+   * @returns The new current camera Y position
+   */
+  private updateCameraY(lerpFactor: number = 0.02): number {
+    this.currentCameraY = this.currentCameraY + (this.targetCameraY - this.currentCameraY) * lerpFactor;
+    return this.currentCameraY;
   }
 }
