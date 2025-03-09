@@ -72,8 +72,34 @@ export class PhysicsRenderer {
     // Update target camera Y position based on car's Y position
     this.targetCameraY = carWorldPos.y;
     
+    // Calculate the vertical distance between the car and the camera in screen space
+    const carScreenY = centerY - (carWorldPos.y - this.currentCameraY) * this.SCALE * this.currentZoom + cameraHeight * 0.2;
+    
+    // Define the inner and outer margins for smooth transition
+    const innerMargin = cameraHeight * 0.15; // 15% of screen height
+    const outerMargin = cameraHeight * 0.05; // 5% of screen height
+    
+    // Calculate how far the car is from the edge as a normalized value (0-1)
+    // 0 = at the inner margin, 1 = at or beyond the outer margin
+    let distanceFromCenter = 0;
+    
+    if (carScreenY < innerMargin) {
+      // Car is too high on screen
+      distanceFromCenter = Math.min(1, (innerMargin - carScreenY) / outerMargin);
+    } else if (carScreenY > cameraHeight - innerMargin) {
+      // Car is too low on screen
+      distanceFromCenter = Math.min(1, (carScreenY - (cameraHeight - innerMargin)) / outerMargin);
+    }
+    
+    // Use a smooth transition between slow and fast lerp factors
+    // Minimum lerp = 0.015 (normal smooth camera)
+    // Maximum lerp = 0.2 (fast catch-up but not too abrupt)
+    const minLerpFactor = 0.015;
+    const maxLerpFactor = 0.2;
+    const lerpFactor = minLerpFactor + distanceFromCenter * (maxLerpFactor - minLerpFactor);
+    
     // Smoothly interpolate current camera Y position towards target
-    this.updateCameraY(0.015); // low lerp factor for smooth camera movement
+    this.updateCameraY(lerpFactor);
     
     // Create a world-to-screen coordinate transformation function
     const worldToScreen = (vec: Vec2) => ({

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TimeTrialScene } from './scenes/time-trial-scene';
 import { InfiniteModeScene } from './scenes/infinite-mode-scene';
+import { MenuBackgroundScene } from './scenes/menu-background-scene';
 
 /**
  * Configuration interface for the Phaser game
@@ -9,7 +10,7 @@ interface GameConfig {
   parent: HTMLElement;
   width: number;
   height: number;
-  mode?: 'time-trial' | 'infinite';
+  mode?: 'time-trial' | 'infinite' | 'menu-background';
 }
 
 /**
@@ -27,7 +28,11 @@ export function createPhaserGame(config: GameConfig): () => void {
     width: config.width*dpiRatio,
     height: config.height*dpiRatio,
     backgroundColor: '#111111',
-    scene: [config.mode === 'time-trial' ? TimeTrialScene : InfiniteModeScene],
+    scene: [
+      // MenuBackgroundScene
+      config.mode === 'time-trial' 
+        ? TimeTrialScene : InfiniteModeScene
+    ],
     // Basic rendering settings for sharper display
     roundPixels: true,
     antialias: true,

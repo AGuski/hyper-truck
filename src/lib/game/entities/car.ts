@@ -1,4 +1,5 @@
 import { World, Vec2, Circle, Polygon, Box, WheelJoint, Body } from 'planck';
+import { carTuning, type CarTuningParams } from '../stores/car-tuning-store';
 
 /**
  * Available drive modes for the car
@@ -31,22 +32,37 @@ export class Car {
   private braking = false;
   private nitroActive = false;
 
-  // Constants and tuning parameters
-  private readonly MAX_SPEED = 130; // 80
-  private readonly ENGINE_TORQUE = 4500; // 4000
-  private readonly CHASSIS_WEIGHT = 900;
-  private readonly MOTOR_WEIGHT = 700;
-  private readonly SUSPENSION_STIFFNESS = 2.5; 
-  private readonly SUSPENSION_DAMPING = 0.5;
-  private readonly WHEEL_GRIP = 11.0;
-  private readonly THROTTLE_INC_RATE = 0.5;
-  private readonly THROTTLE_DEC_RATE = 3.0;
-  private readonly BRAKE_STRENGTH = 1.0;
-  private readonly FRONT_WEIGHT_DISTRIBUTION = 0.75; // 75% of weight on front
-  private readonly REAR_WEIGHT_DISTRIBUTION = 0.25; // 25% of weight on rear
+  // Constants and derived tuning parameters
   private readonly REVERSE_SPEED_FACTOR = 0.5;
   private readonly REVERSE_TORQUE_FACTOR = 0.7;
-  private readonly TOTAL_WEIGHT = this.CHASSIS_WEIGHT + this.MOTOR_WEIGHT;
+  
+  // Store the current tuning values
+  private tuningValues: CarTuningParams;
+  private unsubscribe: () => void;
+  
+  /**
+   * Gets the total weight of the car (chassis + motor)
+   * @returns The total weight in kg
+   */
+  private get TOTAL_WEIGHT(): number {
+    return this.tuningValues.chassisWeight + this.tuningValues.motorWeight;
+  }
+  
+  /**
+   * Gets the rear weight distribution (1 - front weight distribution)
+   * @returns The rear weight distribution as a fraction
+   */
+  private get REAR_WEIGHT_DISTRIBUTION(): number {
+    return 1 - this.tuningValues.frontWeightDistribution;
+  }
+  
+  /**
+   * Gets the front weight distribution
+   * @returns The front weight distribution as a fraction
+   */
+  private get FRONT_WEIGHT_DISTRIBUTION(): number {
+    return this.tuningValues.frontWeightDistribution;
+  }
 
   /**
    * Creates a new Car instance
@@ -54,6 +70,13 @@ export class Car {
    * @param position - The initial position of the car
    */
   constructor(private world: World, position: Vec2) {
+    // Subscribe to the car tuning store
+    this.tuningValues = { maxSpeed: 0, engineTorque: 0, nitroStrength: 0, chassisWeight: 0, motorWeight: 0, frontWeightDistribution: 0, suspensionStiffness: 0, suspensionDamping: 0, wheelGrip: 0, throttleIncRate: 0, throttleDecRate: 0, brakeStrength: 0 };
+    
+    this.unsubscribe = carTuning.subscribe(values => {
+      this.tuningValues = values;
+    });
+    
     // Create car body and components
     this.car = this.createCarBody(position);
     
@@ -88,8 +111,8 @@ export class Car {
       new Vec2(-1.5, 0.2)
     ];
     
-    // Compute density so that the chassis weighs CHASSIS_WEIGHT
-    const carDensity = this.CHASSIS_WEIGHT / 3.4025;
+    // Compute density so that the chassis weighs according to the tuning
+    const carDensity = this.tuningValues.chassisWeight / 3.4025;
     car.createFixture(new Polygon(carVertices), {
       density: carDensity,
       friction: 0.3,
@@ -102,7 +125,7 @@ export class Car {
     // Add engine - a small, heavy box in front of the car
     const heavyEngineShape = new Box(0.25, 0.25, new Vec2(1.0, 0.0), 0);
     car.createFixture(heavyEngineShape, {
-      density: this.MOTOR_WEIGHT,
+      density: this.tuningValues.motorWeight,
       friction: 0.3
     });
 
@@ -115,7 +138,7 @@ export class Car {
    * @returns Object containing front and back wheel bodies
    */
   private createWheels(wheelRadius: number): { wheelFront: Body, wheelBack: Body } {
-    const wheelFD = { density: 1.0, friction: this.WHEEL_GRIP, restitution: 0.2 };
+    const wheelFD = { density: 1.0, friction: this.tuningValues.wheelGrip, restitution: 0.2 };
 
     // Rear wheel (non-driven)
     const wheelBack = this.world.createDynamicBody(new Vec2(-1.0, 0.35));
@@ -152,8 +175,8 @@ export class Car {
       motorSpeed: 0,
       maxMotorTorque: 10.0,
       enableMotor: false,
-      frequencyHz: this.SUSPENSION_STIFFNESS,
-      dampingRatio: this.SUSPENSION_DAMPING
+      frequencyHz: this.tuningValues.suspensionStiffness,
+      dampingRatio: this.tuningValues.suspensionDamping
     }, this.car, this.wheelBack, this.wheelBack.getPosition(), suspensionAxis))!;
 
     // Front suspension (potentially motorized based on drive mode)
@@ -161,8 +184,8 @@ export class Car {
       motorSpeed: 0,
       maxMotorTorque: 20.0,
       enableMotor: true,
-      frequencyHz: this.SUSPENSION_STIFFNESS,
-      dampingRatio: this.SUSPENSION_DAMPING
+      frequencyHz: this.tuningValues.suspensionStiffness,
+      dampingRatio: this.tuningValues.suspensionDamping
     }, this.car, this.wheelFront, this.wheelFront.getPosition(), suspensionAxis))!;
     
     return { frontJoint, backJoint };
@@ -176,9 +199,9 @@ export class Car {
     // Update throttle
     if (!this.braking) {
       if (this.throttle < this.throttleTarget) {
-        this.throttle = Math.min(this.throttle + this.THROTTLE_INC_RATE * dt, this.throttleTarget);
+        this.throttle = Math.min(this.throttle + this.tuningValues.throttleIncRate * dt, this.throttleTarget);
       } else if (this.throttle > this.throttleTarget) {
-        this.throttle = Math.max(this.throttle - this.THROTTLE_DEC_RATE * dt, this.throttleTarget);
+        this.throttle = Math.max(this.throttle - this.tuningValues.throttleDecRate * dt, this.throttleTarget);
       }
     } else {
       this.throttle = 0;
@@ -192,9 +215,9 @@ export class Car {
 
     // Motor Control
     if (this.throttle > 0 && !this.braking) {
-      const nitroMultiplier = this.nitroActive ? 2.0 : 1.0;
-      const targetAngularSpeed = (this.MAX_SPEED * nitroMultiplier) / 0.4;
-      const totalEngineTorque = this.throttle * this.ENGINE_TORQUE * nitroMultiplier;
+      const nitroMultiplier = this.nitroActive ? this.tuningValues.nitroStrength : 1.0;
+      const targetAngularSpeed = (this.tuningValues.maxSpeed * nitroMultiplier) / 0.4;
+      const totalEngineTorque = this.throttle * this.tuningValues.engineTorque * nitroMultiplier;
       
       // Apply drive based on selected drive mode
       switch (this.driveMode) {
@@ -248,12 +271,12 @@ export class Car {
       this.reverseThrottle = 0;
     } else if (this.braking) {
       if (forwardSpeed < 0.5) {
-        this.reverseThrottle = Math.min(this.reverseThrottle + this.THROTTLE_INC_RATE * dt, 1.0);
-        const reverseMaxSpeed = this.MAX_SPEED * this.REVERSE_SPEED_FACTOR;
-        const reverseTorque = this.ENGINE_TORQUE * this.REVERSE_TORQUE_FACTOR;
+        this.reverseThrottle = Math.min(this.reverseThrottle + this.tuningValues.throttleIncRate * dt, 1.0);
+        const reverseMaxSpeed = this.tuningValues.maxSpeed * this.REVERSE_SPEED_FACTOR;
+        const reverseTorque = this.tuningValues.engineTorque * this.REVERSE_TORQUE_FACTOR;
         let currentEngineTorque = this.reverseThrottle * reverseTorque;
         const normalForceFront = totalWeightForce * 0.5;
-        const tractionForceLimit = normalForceFront * this.WHEEL_GRIP;
+        const tractionForceLimit = normalForceFront * this.tuningValues.wheelGrip;
         let driveForce = currentEngineTorque / 0.4;
         if (driveForce > tractionForceLimit) {
           driveForce = tractionForceLimit;
@@ -298,23 +321,23 @@ export class Car {
         switch (this.driveMode) {
           case DriveMode.FRONT_WHEEL_DRIVE:
             this.springFront.setMotorSpeed(0);
-            this.springFront.setMaxMotorTorque(this.ENGINE_TORQUE * this.BRAKE_STRENGTH);
+            this.springFront.setMaxMotorTorque(this.tuningValues.engineTorque * this.tuningValues.brakeStrength);
             this.springFront.enableMotor(true);
             break;
             
           case DriveMode.REAR_WHEEL_DRIVE:
             this.springBack.setMotorSpeed(0);
-            this.springBack.setMaxMotorTorque(this.ENGINE_TORQUE * this.BRAKE_STRENGTH);
+            this.springBack.setMaxMotorTorque(this.tuningValues.engineTorque * this.tuningValues.brakeStrength);
             this.springBack.enableMotor(true);
             break;
             
           case DriveMode.ALL_WHEEL_DRIVE:
             this.springFront.setMotorSpeed(0);
-            this.springFront.setMaxMotorTorque(this.ENGINE_TORQUE * this.BRAKE_STRENGTH * 0.6);
+            this.springFront.setMaxMotorTorque(this.tuningValues.engineTorque * this.tuningValues.brakeStrength * 0.6);
             this.springFront.enableMotor(true);
             
             this.springBack.setMotorSpeed(0);
-            this.springBack.setMaxMotorTorque(this.ENGINE_TORQUE * this.BRAKE_STRENGTH * 0.4);
+            this.springBack.setMaxMotorTorque(this.tuningValues.engineTorque * this.tuningValues.brakeStrength * 0.4);
             this.springBack.enableMotor(true);
             break;
         }
@@ -340,7 +363,7 @@ export class Car {
     const airborneThreshold = 5.5;
     const carPos = this.car.getPosition();
     if (carPos.y > airborneThreshold) {
-      const extraForce = this.ENGINE_TORQUE;
+      const extraForce = this.tuningValues.engineTorque;
       const frontPt = this.car.getWorldPoint(new Vec2(1.0, 0));
       this.car.applyForce(new Vec2(0, -extraForce), frontPt);
     }
@@ -422,7 +445,7 @@ export class Car {
     totalWeightForce: number
   ): void {
     const normalForce = totalWeightForce * weightDistribution;
-    const tractionForceLimit = normalForce * this.WHEEL_GRIP;
+    const tractionForceLimit = normalForce * this.tuningValues.wheelGrip;
     let driveForce = engineTorque / 0.4; // wheelRadius = 0.4
     
     if (driveForce > tractionForceLimit) {
@@ -515,10 +538,12 @@ export class Car {
    * @param position - The new position to place the car at
    */
   public resetPosition(position: Vec2): void {
-    // Reset car position and velocity
+    // Reset car position, velocity, and rotation
     this.car.setPosition(position);
     this.car.setLinearVelocity(new Vec2(0, 0));
     this.car.setAngularVelocity(0);
+    // Reset car rotation to default orientation (0 radians = facing right)
+    this.car.setAngle(0);
     
     // Reset wheel positions relative to car
     const wheelFrontPos = new Vec2(position.x + 1.0, position.y - 0.6);
@@ -538,5 +563,16 @@ export class Car {
     this.reverseThrottle = 0.0;
     this.braking = false;
     this.nitroActive = false;
+  }
+  
+  /**
+   * Cleans up resources used by the car
+   * Call this method when the car is no longer needed to prevent memory leaks
+   */
+  public destroy(): void {
+    // Unsubscribe from the car tuning store
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
   }
 }

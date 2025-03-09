@@ -1,5 +1,21 @@
 import { World, Vec2, Edge, Box, RevoluteJoint } from 'planck';
-import type { Body } from 'planck';
+import type { Body, Shape } from 'planck';
+
+// Interface for accessing Edge shape internal properties
+interface EdgeShape extends Shape {
+  m_vertex1: Vec2;
+  m_vertex2: Vec2;
+}
+
+type TerrainGenParams = {
+  maxAngle: number;
+  minSegmentLength: number;
+  maxSegmentLength: number;
+  maxHeightChange: number;
+  groundFriction: number;
+  featureProbability: number;
+  seed?: number;
+}
 
 /**
  * Represents procedurally generated terrain that creates new segments as the player advances.
@@ -24,16 +40,16 @@ export class ProceduralTerrain {
   private chunks: { startX: number; endX: number }[] = [];
   
   /** The maximum angle (in degrees) for terrain generation */
-  private readonly MAX_ANGLE = 20;
+  private MAX_ANGLE = 20;
   
   /** The minimum segment length */
-  private readonly MIN_SEGMENT_LENGTH = 5;
+  private MIN_SEGMENT_LENGTH = 5;
   
   /** The maximum segment length */
-  private readonly MAX_SEGMENT_LENGTH = 20;
+  private MAX_SEGMENT_LENGTH = 20;
   
   /** The maximum height change between segments */
-  private readonly MAX_HEIGHT_CHANGE = 3;
+  private MAX_HEIGHT_CHANGE = 3;
   
   /** The view distance ahead of the player where terrain should exist */
   private readonly GENERATION_DISTANCE = 300;
@@ -42,19 +58,27 @@ export class ProceduralTerrain {
   private readonly CLEANUP_DISTANCE = 100;
   
   /** The friction of the ground */
-  private readonly GROUND_FRICTION = 0.6;
+  private GROUND_FRICTION = 0.6;
   
   /** Probability of generating a special feature (0-1) */
-  private readonly FEATURE_PROBABILITY = 0.1;
+  private FEATURE_PROBABILITY = 0.1;
   
   /**
    * Creates a new procedural terrain in the given physics world.
    * @param world - The physics world to create the terrain in
    * @param seed - Optional seed for terrain generation. If not provided, a random seed will be used.
    */
-  constructor(private world: World, seed?: number) {
+  constructor(private world: World, params?: Partial<TerrainGenParams>) {
+
+    this.MAX_ANGLE = params?.maxAngle ?? this.MAX_ANGLE;
+    this.MIN_SEGMENT_LENGTH = params?.minSegmentLength ?? this.MIN_SEGMENT_LENGTH;
+    this.MAX_SEGMENT_LENGTH = params?.maxSegmentLength ?? this.MAX_SEGMENT_LENGTH;
+    this.MAX_HEIGHT_CHANGE = params?.maxHeightChange ?? this.MAX_HEIGHT_CHANGE;
+    this.GROUND_FRICTION = params?.groundFriction ?? this.GROUND_FRICTION;
+    this.FEATURE_PROBABILITY = params?.featureProbability ?? this.FEATURE_PROBABILITY;
+    
     // Initialize with provided seed or generate a random one
-    this.initialSeed = seed !== undefined ? seed : Math.floor(Math.random() * 1000000);
+    this.initialSeed = params?.seed ?? Math.floor(Math.random() * 1000000);
     this.seed = this.initialSeed;
     
     this.ground = this.world.createBody();
@@ -301,6 +325,55 @@ export class ProceduralTerrain {
     
     // Clean up old terrain chunks that are far behind the player
     this.cleanupOldTerrain(playerX);
+  }
+  
+  /**
+   * Gets the approximate height of the terrain at a given x position.
+   * This is useful for determining if the car has fallen below the terrain.
+   * @param x - The x position to get the height at
+   * @returns The approximate height of the terrain at the given x position
+   */
+  public getHeightAt(x: number): number {
+    // Find the chunk that contains this x position
+    for (const chunk of this.chunks) {
+      if (x >= chunk.startX && x <= chunk.endX) {
+        // For initial flat ground, return 0
+        if (chunk.startX === -20 && chunk.endX === 50) {
+          return 0;
+        }
+        
+        // For other chunks, we need to estimate the height based on the segment
+        // This is an approximation since we don't store the exact height at each point
+        // We'll use linear interpolation between the start and end of the segment
+        
+        // First, find the fixtures that make up this chunk
+        let fixture = this.ground.getFixtureList();
+        while (fixture) {
+          const shape = fixture.getShape();
+          
+          // We're only interested in Edge shapes
+          if (shape.getType() === 'edge') {
+            // Cast the shape to our EdgeShape interface to access vertices
+            const edge = shape as EdgeShape;
+            const v1 = edge.m_vertex1;
+            const v2 = edge.m_vertex2;
+            
+            // Check if this edge contains our x position
+            if (x >= v1.x && x <= v2.x) {
+              // Linear interpolation to find the height
+              const t = (x - v1.x) / (v2.x - v1.x);
+              return v1.y + t * (v2.y - v1.y);
+            }
+          }
+          
+          fixture = fixture.getNext();
+        }
+      }
+    }
+    
+    // If we're outside all chunks, use the last known height
+    // This is a fallback for when the car goes beyond generated terrain
+    return this.lastY;
   }
   
   /**
