@@ -15,7 +15,10 @@ export class ProceduralTerrain {
   private lastY = 0;
   
   /** The current terrain seed - used for reproducible randomness */
-  private seed = Math.random() * 10000;
+  private seed: number;
+  
+  /** The initial seed value - stored for reset operations */
+  private readonly initialSeed: number;
   
   /** Terrain chunks that have been generated */
   private chunks: { startX: number; endX: number }[] = [];
@@ -47,11 +50,50 @@ export class ProceduralTerrain {
   /**
    * Creates a new procedural terrain in the given physics world.
    * @param world - The physics world to create the terrain in
+   * @param seed - Optional seed for terrain generation. If not provided, a random seed will be used.
    */
-  constructor(private world: World) {
+  constructor(private world: World, seed?: number) {
+    // Initialize with provided seed or generate a random one
+    this.initialSeed = seed !== undefined ? seed : Math.floor(Math.random() * 1000000);
+    this.seed = this.initialSeed;
+    
     this.ground = this.world.createBody();
     
     // Create initial flat ground
+    this.createInitialTerrain();
+  }
+  
+  /**
+   * Gets the current seed used for terrain generation.
+   * @returns The current terrain generation seed
+   */
+  public getSeed(): number {
+    return this.initialSeed;
+  }
+  
+  /**
+   * Resets the terrain with the current or a new seed.
+   * This removes all existing terrain and generates new terrain.
+   * @param seed - Optional new seed to use. If not provided, the initial seed will be used.
+   */
+  public reset(seed?: number): void {
+    // Update seed if provided, otherwise use the initial seed
+    this.seed = seed !== undefined ? seed : this.initialSeed;
+    
+    // Remove all fixtures from the ground body
+    let fixture = this.ground.getFixtureList();
+    while (fixture) {
+      const next = fixture.getNext();
+      this.ground.destroyFixture(fixture);
+      fixture = next;
+    }
+    
+    // Reset position tracking
+    this.lastX = 0;
+    this.lastY = 0;
+    this.chunks = [];
+    
+    // Recreate initial terrain
     this.createInitialTerrain();
   }
   
