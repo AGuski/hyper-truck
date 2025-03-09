@@ -45,6 +45,8 @@ function startSceneForGameMode(game: Phaser.Game, mode: GameMode): void {
       game.scene.sleep(key);
     }
   });
+
+  console.log(game.scene.getScene(sceneKey));
   
   // Start the new scene if it exists
   if (game.scene.getScene(sceneKey)) {

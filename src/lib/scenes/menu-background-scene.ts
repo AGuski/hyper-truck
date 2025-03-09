@@ -23,8 +23,8 @@ export class MenuBackgroundScene extends Phaser.Scene {
   private physicsSystem!: PhysicsSystem;
   
   // --- Auto-drive properties ---
-  private readonly AUTO_THROTTLE_MIN_SPEED = 25; // Minimum speed in km/h
-  private readonly AUTO_THROTTLE_MAX_SPEED = 35; // Maximum speed in km/h
+  private readonly AUTO_THROTTLE_MIN_SPEED = 27; // Minimum speed in km/h
+  private readonly AUTO_THROTTLE_MAX_SPEED = 30; // Maximum speed in km/h
   
   constructor() {
     super({ key: 'MenuBackgroundScene' });
@@ -61,7 +61,7 @@ export class MenuBackgroundScene extends Phaser.Scene {
     this.physicsSystem = new PhysicsSystem();
 
     // --- Create procedural terrain with fixed seed for consistency ---
-    this.terrain = new ProceduralTerrain(this.world, { maxAngle: 30, maxHeightChange: 12, featureProbability: 0 });
+    this.terrain = new ProceduralTerrain(this.world, { maxAngle: 10, maxHeightChange: 3, minSegmentLength: 2, featureProbability: 0 });
 
     // --- Create the car at position (0, 1) ---
     this.car = new Car(this.world, new Vec2(0, 1));
