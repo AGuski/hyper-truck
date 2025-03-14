@@ -3,6 +3,7 @@ import { TimeTrialScene } from './scenes/time-trial-scene';
 import { InfiniteModeScene } from './scenes/infinite-mode-scene';
 import { MenuBackgroundScene } from './scenes/menu-background-scene';
 import { GameMode, gameState } from './stores/game-state-store';
+import { deviceInfo } from './stores/device-store';
 
 /**
  * Configuration interface for the Phaser game
@@ -14,11 +15,6 @@ interface GameConfig {
   mode?: GameMode;
 }
 
-/**
- * Creates and initializes a Phaser game instance
- * @param config - Configuration for the game
- * @returns A cleanup function to destroy the game when no longer needed
- */
 /**
  * Maps game modes to their corresponding scene keys
  */
@@ -72,17 +68,31 @@ function startSceneForGameMode(game: Phaser.Game, mode: GameMode): void {
   }
 }
 
-export function createPhaserGame(config: GameConfig): () => void {
+/**
+ * Handles game resizing based on device orientation and screen size
+ * @param game - The Phaser game instance
+ */
+function handleGameResize(game: Phaser.Game): void {
+  // Get current dimensions
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  
+  // Update the game size
+  game.scale.resize(width, height);
+  
+  // Force redraw of the canvas with correct dimensions
+  game.scale.refresh();
+}
 
+export function createPhaserGame(config: GameConfig): () => void {
   console.log('Creating Phaser game with config:', config);
 
-  const dpiRatio = window.devicePixelRatio;
   // Game configuration
   const phaserConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     parent: config.parent,
-    width: config.width*dpiRatio,
-    height: config.height*dpiRatio,
+    width: config.width,
+    height: config.height,
     backgroundColor: '#111111',
     scene: [
       MenuBackgroundScene,
@@ -96,28 +106,65 @@ export function createPhaserGame(config: GameConfig): () => void {
     render: {
       pixelArt: false
     },
-    // Scale mode for high-DPI displays
+    // Scale mode for responsive design
     scale: {
       mode: Phaser.Scale.RESIZE,
-      autoCenter: Phaser.Scale.CENTER_BOTH
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      expandParent: true
     }
   };
 
   // Create the game instance
   const game = new Phaser.Game(phaserConfig);
   
+  // Set up orientation change and resize handlers
+  let orientationChangeTimeout: number | null = null;
+  
+  const handleOrientationChange = (): void => {
+    // Clear any existing timeout
+    if (orientationChangeTimeout !== null) {
+      window.clearTimeout(orientationChangeTimeout);
+    }
+    
+    // Add a small delay to ensure dimensions have updated
+    orientationChangeTimeout = window.setTimeout(() => {
+      handleGameResize(game);
+      orientationChangeTimeout = null;
+    }, 200);
+  };
+  
+  // Listen for orientation changes
+  window.addEventListener('orientationchange', handleOrientationChange);
+  window.addEventListener('resize', handleOrientationChange);
+  
+  // Subscribe to our device store for orientation changes
+  const unsubscribeDevice = deviceInfo.subscribe(() => {
+    handleOrientationChange();
+  });
+  
   // Start the initial scene based on the current game mode
   startSceneForGameMode(game, config.mode || GameMode.MENU);
   
   // Subscribe to game state changes to handle scene switching
-  const unsubscribe = gameState.subscribe(state => {
+  const unsubscribeGameState = gameState.subscribe(state => {
     startSceneForGameMode(game, state.currentMode);
   });
 
   // Return a cleanup function
   return (): void => {
-    // Unsubscribe from the game state store
-    unsubscribe();
+    // Unsubscribe from stores
+    unsubscribeGameState();
+    unsubscribeDevice();
+    
+    // Remove event listeners
+    window.removeEventListener('orientationchange', handleOrientationChange);
+    window.removeEventListener('resize', handleOrientationChange);
+    
+    // Clear any pending timeouts
+    if (orientationChangeTimeout !== null) {
+      window.clearTimeout(orientationChangeTimeout);
+    }
+    
     // Destroy the game instance
     game.destroy(true);
   };

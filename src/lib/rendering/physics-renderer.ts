@@ -273,11 +273,11 @@ export class PhysicsRenderer {
    * @returns Target zoom level
    */
   public calculateTargetZoom(
-    speed: number,
-    minZoom: number = 0.25,
-    maxZoom: number = 1,
-    maxSpeed: number = 80
+    speed: number
   ): number {
+    const minZoom: number = 0.25;
+    const maxZoom: number = 1;
+    const maxSpeed: number = 80
     const speedFactor = Math.abs(speed) / (maxSpeed - 40);
     return maxZoom - (maxZoom - minZoom) * speedFactor;
   }
