@@ -118,13 +118,13 @@
     Settings
   </button>
   <!-- Credits Button at Bottom Right -->
-  <button
+  <!-- <button
     onclick={() => alert("Credits coming soon")}
     class={`${secondaryButtonClass} fixed bottom-4 right-4 w-24`}
     style="position: fixed"
   >
     Credits
-  </button>
+  </button> -->
 </div>
 
 <style>

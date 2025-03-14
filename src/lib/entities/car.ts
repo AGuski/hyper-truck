@@ -430,36 +430,6 @@ export class Car {
   }
   
   /**
-   * Applies drive force to a wheel
-   * @param wheelJoint - The wheel joint to apply force to
-   * @param engineTorque - The engine torque to apply
-   * @param targetAngularSpeed - The target angular speed
-   * @param weightDistribution - The weight distribution for this wheel
-   * @param totalWeightForce - The total weight force of the car
-   */
-  private applyDriveToWheel(
-    wheelJoint: WheelJoint, 
-    engineTorque: number, 
-    targetAngularSpeed: number,
-    weightDistribution: number,
-    totalWeightForce: number
-  ): void {
-    const normalForce = totalWeightForce * weightDistribution;
-    const tractionForceLimit = normalForce * this.tuningValues.wheelGrip;
-    let driveForce = engineTorque / 0.4; // wheelRadius = 0.4
-    
-    if (driveForce > tractionForceLimit) {
-      driveForce = tractionForceLimit;
-      engineTorque = driveForce * 0.4;
-    }
-    
-    // For forward drive, set motor speed negative
-    wheelJoint.setMotorSpeed(-targetAngularSpeed * this.throttle);
-    wheelJoint.setMaxMotorTorque(engineTorque);
-    wheelJoint.enableMotor(true);
-  }
-
-  /**
    * Gets the current position of the car body
    * @returns The position vector of the car
    */
@@ -475,6 +445,15 @@ export class Car {
     const velocity = this.car.getLinearVelocity();
     const forward = this.car.getWorldVector(new Vec2(1, 0));
     return Vec2.dot(velocity, forward);
+  }
+
+  /**
+   * Gets the car's speed in km/h
+   * @returns The speed in km/h
+   */
+  public getSpeed(): number {
+    // Convert m/s to km/h (multiply by 3.6)
+    return Math.abs(this.getForwardSpeed() * 3.6);
   }
 
   /**
@@ -574,5 +553,35 @@ export class Car {
     if (this.unsubscribe) {
       this.unsubscribe();
     }
+  }
+
+  /**
+   * Applies drive force to a wheel
+   * @param wheelJoint - The wheel joint to apply force to
+   * @param engineTorque - The engine torque to apply
+   * @param targetAngularSpeed - The target angular speed
+   * @param weightDistribution - The weight distribution for this wheel
+   * @param totalWeightForce - The total weight force of the car
+   */
+  private applyDriveToWheel(
+    wheelJoint: WheelJoint, 
+    engineTorque: number, 
+    targetAngularSpeed: number,
+    weightDistribution: number,
+    totalWeightForce: number
+  ): void {
+    const normalForce = totalWeightForce * weightDistribution;
+    const tractionForceLimit = normalForce * this.tuningValues.wheelGrip;
+    let driveForce = engineTorque / 0.4; // wheelRadius = 0.4
+    
+    if (driveForce > tractionForceLimit) {
+      driveForce = tractionForceLimit;
+      engineTorque = driveForce * 0.4;
+    }
+    
+    // For forward drive, set motor speed negative
+    wheelJoint.setMotorSpeed(-targetAngularSpeed * this.throttle);
+    wheelJoint.setMaxMotorTorque(engineTorque);
+    wheelJoint.enableMotor(true);
   }
 }

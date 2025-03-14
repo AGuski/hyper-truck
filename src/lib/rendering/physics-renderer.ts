@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { World, Vec2, Body } from 'planck';
 import type { PolygonShape, CircleShape, EdgeShape } from 'planck';
 import { Car } from '../entities/car';
+import { CameraController } from './camera-controller';
 
 /**
  * Handles rendering of physics bodies and game elements using Phaser graphics.
@@ -9,10 +10,8 @@ import { Car } from '../entities/car';
  */
 export class PhysicsRenderer {
   private readonly SCALE: number = 50;// Pixels per meter
-  private currentZoom: number = 0.5;   // Current camera zoom level
   private graphics: Phaser.GameObjects.Graphics;
-  private targetCameraY: number = 0;   // Target Y position for camera
-  private currentCameraY: number = 0;  // Current Y position for camera
+  private cameraController: CameraController;
   
   /**
    * Creates a new PhysicsRenderer instance
@@ -20,8 +19,7 @@ export class PhysicsRenderer {
    */
   constructor(graphics: Phaser.GameObjects.Graphics) {
     this.graphics = graphics;
-    this.targetCameraY = 0;
-    this.currentCameraY = 0;
+    this.cameraController = new CameraController();
   }
   
   /**
@@ -29,7 +27,7 @@ export class PhysicsRenderer {
    * @param zoom - New zoom level
    */
   public setZoom(zoom: number): void {
-    this.currentZoom = zoom;
+    this.cameraController.setZoom(zoom);
   }
   
   /**
@@ -37,7 +35,7 @@ export class PhysicsRenderer {
    * @returns Current zoom level
    */
   public getZoom(): number {
-    return this.currentZoom;
+    return this.cameraController.getZoom();
   }
   
   /**
@@ -64,51 +62,18 @@ export class PhysicsRenderer {
     cameraHeight: number,
     distanceFilter?: number
   ): void {
-    // Simple camera: we'll center drawing on the car.
-    const centerX = Math.round(cameraWidth / 2);
-    const centerY = Math.round(cameraHeight / 2);
     const carWorldPos = car.getPosition();
+    const carSpeed = car.getSpeed();
     
-    // Update target camera Y position based on car's Y position
-    this.targetCameraY = carWorldPos.y;
+    // Update camera position based on car position and speed
+    this.cameraController.updateCamera(carWorldPos, cameraWidth, cameraHeight, carSpeed);
     
-    // Calculate the vertical distance between the car and the camera in screen space
-    const carScreenY = centerY - (carWorldPos.y - this.currentCameraY) * this.SCALE * this.currentZoom + cameraHeight * 0.2;
-    
-    // Define the inner and outer margins for smooth transition
-    const innerMargin = cameraHeight * 0.15; // 15% of screen height
-    const outerMargin = cameraHeight * 0.05; // 5% of screen height
-    
-    // Calculate how far the car is from the edge as a normalized value (0-1)
-    // 0 = at the inner margin, 1 = at or beyond the outer margin
-    let distanceFromCenter = 0;
-    
-    if (carScreenY < innerMargin) {
-      // Car is too high on screen
-      distanceFromCenter = Math.min(1, (innerMargin - carScreenY) / outerMargin);
-    } else if (carScreenY > cameraHeight - innerMargin) {
-      // Car is too low on screen
-      distanceFromCenter = Math.min(1, (carScreenY - (cameraHeight - innerMargin)) / outerMargin);
-    }
-    
-    // Use a smooth transition between slow and fast lerp factors
-    // Minimum lerp = 0.015 (normal smooth camera)
-    // Maximum lerp = 0.2 (fast catch-up but not too abrupt)
-    const minLerpFactor = 0.015;
-    const maxLerpFactor = 0.2;
-    const lerpFactor = minLerpFactor + distanceFromCenter * (maxLerpFactor - minLerpFactor);
-    
-    // Smoothly interpolate current camera Y position towards target
-    this.updateCameraY(lerpFactor);
-    
-    // Create a world-to-screen coordinate transformation function
-    const worldToScreen = (vec: Vec2) => ({
-      // Round to exact pixels for sharper rendering
-      // Only follow the car on X axis, apply zoom factor
-      x: Math.round(centerX + (vec.x - carWorldPos.x) * this.SCALE * this.currentZoom),
-      // Smooth Y follow with offset - interpolate towards car's Y position
-      y: Math.round(centerY - (vec.y - this.currentCameraY) * this.SCALE * this.currentZoom + cameraHeight * 0.2)
-    });
+    // Get the world-to-screen coordinate transformation function
+    const worldToScreen = this.cameraController.getWorldToScreenTransform(
+      carWorldPos, 
+      cameraWidth, 
+      cameraHeight
+    );
 
     // Render each body in the world
     for (let body = world.getBodyList(); body; body = body.getNext()) {
@@ -208,7 +173,7 @@ export class PhysicsRenderer {
     this.graphics.fillStyle(0xffffff, 0.07);
     
     // Apply zoom factor to the circle radius
-    const scaledRadius = radius * this.SCALE * this.currentZoom;
+    const scaledRadius = radius * this.SCALE * this.cameraController.getZoom();
     
     // Draw filled circle with stroke for better visibility
     this.graphics.fillCircle(screenCenter.x, screenCenter.y, scaledRadius);
@@ -267,19 +232,10 @@ export class PhysicsRenderer {
   /**
    * Calculates the target zoom level based on car speed
    * @param speed - Current car speed
-   * @param minZoom - Minimum zoom level (maximum zoom out)
-   * @param maxZoom - Maximum zoom level (maximum zoom in)
-   * @param maxSpeed - Speed reference for zoom calculation
    * @returns Target zoom level
    */
-  public calculateTargetZoom(
-    speed: number
-  ): number {
-    const minZoom: number = 0.25;
-    const maxZoom: number = 1;
-    const maxSpeed: number = 80
-    const speedFactor = Math.abs(speed) / (maxSpeed - 40);
-    return maxZoom - (maxZoom - minZoom) * speedFactor;
+  public calculateTargetZoom(speed: number): number {
+    return this.cameraController.calculateTargetZoom(speed);
   }
   
   /**
@@ -289,17 +245,6 @@ export class PhysicsRenderer {
    * @returns The new current zoom level
    */
   public updateZoom(targetZoom: number, lerpFactor: number = 0.02): number {
-    this.currentZoom = this.currentZoom + (targetZoom - this.currentZoom) * lerpFactor;
-    return this.currentZoom;
-  }
-  
-  /**
-   * Smoothly updates the current camera Y position towards the target Y position
-   * @param lerpFactor - Interpolation factor (0-1, higher = faster transition)
-   * @returns The new current camera Y position
-   */
-  private updateCameraY(lerpFactor: number = 0.02): number {
-    this.currentCameraY = this.currentCameraY + (this.targetCameraY - this.currentCameraY) * lerpFactor;
-    return this.currentCameraY;
+    return this.cameraController.updateZoom(targetZoom, lerpFactor);
   }
 }

@@ -1,15 +1,18 @@
 <script lang="ts">
+    import { deviceInfo } from "$lib/stores/device-store";
+
   // GameTitle.svelte - ASCII art title component for HYPER TRUCK
 </script>
 
 <pre class="ascii-title text-center mt-16 mb-6 text-transparent bg-clip-text gradient-text">
-
+<div class:mobile-title={$deviceInfo.isMobile}>
   ██╗  ██╗██╗   ██╗██████╗ ███████╗██████╗     ████████╗██████╗ ██╗   ██╗ ██████╗██╗  ██╗
   ██║  ██║╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗    ╚══██╔══╝██╔══██╗██║   ██║██╔════╝██║ ██╔╝
   ███████║ ╚████╔╝ ██████╔╝█████╗  ██████╔╝       ██║   ██████╔╝██║   ██║██║     █████╔╝ 
   ██╔══██║  ╚██╔╝  ██╔═══╝ ██╔══╝  ██╔══██╗       ██║   ██╔══██╗██║   ██║██║     ██╔═██╗ 
   ██║  ██║   ██║   ██║     ███████╗██║  ██║       ██║   ██║  ██║╚██████╔╝╚██████╗██║  ██╗
   ╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚══════╝╚═╝  ╚═╝       ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
+</div>
                                                                                    
  🔥🔥🔥 THE PHYSICS-DEFYING DRIVING EXPERIENCE 🔥🔥🔥
    <a href="https://github.com/AGuski/hyper-truck" target="_blank" rel="noopener noreferrer" class="github-link flex items-center justify-center transition-all">
@@ -63,7 +66,7 @@
   .github-link:hover span {
     text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
   }
-  
+
   .ascii-title {
     font-family: monospace;
     font-size: 0.6rem;
@@ -82,5 +85,9 @@
     .ascii-title {
       font-size: 0.8rem;
     }
+  }
+
+  .mobile-title {
+    font-size: 0.6rem;
   }
 </style>
