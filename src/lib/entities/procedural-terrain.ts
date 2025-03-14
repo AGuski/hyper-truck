@@ -192,7 +192,7 @@ export class ProceduralTerrain {
    * @param y - The y position for the feature
    */
   private addRandomFeature(x: number, y: number): void {
-    const featureType = Math.floor(this.seededRandom(0, 2));
+    const featureType = Math.floor(this.seededRandom(0, 3));
     
     switch (featureType) {
       case 0:
@@ -203,7 +203,11 @@ export class ProceduralTerrain {
         // Boxes
         this.addBoxes(x, y);
         break;
-      // case 2:
+      case 2:
+        // Bridge
+        this.addBridge(x, y);
+        break;
+      // case 3:
       //   // Teeter-totter
       //   this.addTeeter(x, y);
       //   break;
@@ -306,6 +310,74 @@ export class ProceduralTerrain {
     
     // Update the last position
     this.lastX = x + platformLength;
+    this.lastY = y;
+    
+    // Add this feature to our chunks list
+    this.chunks.push({ startX: x, endX: this.lastX });
+  }
+  
+  /**
+   * Adds a bridge at the specified position.
+   * @param x - The x position for the bridge
+   * @param y - The y position for the bridge
+   */
+  private addBridge(x: number, y: number): void {
+    // Create bridge parameters
+    const bridgeFD = { density: 250.0, friction: 0.6 };
+    const bridgeLength = Math.floor(this.seededRandom(10, 20)); // Random bridge length
+    const segmentWidth = 2; // Width of each bridge segment
+    
+    // Create a gap in the terrain for the bridge
+    const gapLength = bridgeLength * segmentWidth;
+    
+    // Create supports on both sides
+    const groundFD = { density: 0.0, friction: this.GROUND_FRICTION };
+    
+    // Left support
+    this.ground.createFixture(
+      new Edge(new Vec2(x, y), new Vec2(x + 1, y)),
+      groundFD
+    );
+    
+    // Right support (after the gap)
+    this.ground.createFixture(
+      new Edge(new Vec2(x + 1 + gapLength, y), new Vec2(x + 3 + gapLength, y)),
+      groundFD
+    );
+    
+    // Create the bridge segments
+    let prevBody = this.ground; // Start connected to the left ground support
+    const startX = x + 2; // Start at the end of the left support
+    
+    for (let i = 0; i < bridgeLength; ++i) {
+      const bridgeBlock = this.world.createDynamicBody(new Vec2(startX + segmentWidth * i, y - 0.125));
+      bridgeBlock.createFixture(new Box(segmentWidth / 2, 0.125), bridgeFD);
+      
+      // Connect this segment to the previous body with a revolute joint
+      this.world.createJoint(
+        new RevoluteJoint(
+          {}, 
+          prevBody, 
+          bridgeBlock, 
+          new Vec2(startX + segmentWidth * i - segmentWidth / 2, y - 0.125)
+        )
+      );
+      
+      prevBody = bridgeBlock;
+    }
+    
+    // Connect the last bridge segment to the right ground support
+    this.world.createJoint(
+      new RevoluteJoint(
+        {}, 
+        prevBody, 
+        this.ground, 
+        new Vec2(x + 1 + gapLength, y - 0.125)
+      )
+    );
+    
+    // Update the last position
+    this.lastX = x + 3 + gapLength;
     this.lastY = y;
     
     // Add this feature to our chunks list
