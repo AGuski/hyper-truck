@@ -323,9 +323,10 @@ export class ProceduralTerrain {
    */
   private addBridge(x: number, y: number): void {
     // Create bridge parameters
-    const bridgeFD = { density: 250.0, friction: 0.6 };
+    const bridgeFD = { density: 150.0, friction: 0.6 };
     const bridgeLength = Math.floor(this.seededRandom(10, 20)); // Random bridge length
     const segmentWidth = 2; // Width of each bridge segment
+    const bridgeStiffness = 4.0; //this.seededRandom(0.5, 5.0); // Stiffness factor (higher = stiffer bridge)
     
     // Create a gap in the terrain for the bridge
     const gapLength = bridgeLength * segmentWidth;
@@ -351,12 +352,29 @@ export class ProceduralTerrain {
     
     for (let i = 0; i < bridgeLength; ++i) {
       const bridgeBlock = this.world.createDynamicBody(new Vec2(startX + segmentWidth * i, y - 0.125));
-      bridgeBlock.createFixture(new Box(segmentWidth / 2, 0.125), bridgeFD);
+      
+      // Adjust density based on stiffness - stiffer bridges have higher density
+      const adjustedDensity = bridgeFD.density * bridgeStiffness;
+      bridgeBlock.createFixture(new Box(segmentWidth / 2, 0.125), { 
+        density: adjustedDensity, 
+        friction: bridgeFD.friction 
+      });
       
       // Connect this segment to the previous body with a revolute joint
+      const jointDef = {
+        // Add joint limits based on stiffness - stiffer bridges have tighter limits
+        lowerAngle: -Math.PI / (12 * bridgeStiffness), // Limit rotation (radians)
+        upperAngle: Math.PI / (12 * bridgeStiffness),
+        enableLimit: true,
+        // Add some damping to reduce oscillation
+        enableMotor: false,
+        maxMotorTorque: 100 * bridgeStiffness,
+        motorSpeed: 0
+      };
+      
       this.world.createJoint(
         new RevoluteJoint(
-          {}, 
+          jointDef, 
           prevBody, 
           bridgeBlock, 
           new Vec2(startX + segmentWidth * i - segmentWidth / 2, y - 0.125)
@@ -367,9 +385,15 @@ export class ProceduralTerrain {
     }
     
     // Connect the last bridge segment to the right ground support
+    const finalJointDef = {
+      lowerAngle: -Math.PI / (12 * bridgeStiffness),
+      upperAngle: Math.PI / (12 * bridgeStiffness),
+      enableLimit: true
+    };
+    
     this.world.createJoint(
       new RevoluteJoint(
-        {}, 
+        finalJointDef, 
         prevBody, 
         this.ground, 
         new Vec2(x + 1 + gapLength, y - 0.125)
