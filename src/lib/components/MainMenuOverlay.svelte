@@ -5,12 +5,6 @@
     setGameMode,
     setPlayerName,
   } from "$lib/stores/game-state-store";
-  import {
-    carTuning,
-    resetCarTuning,
-    updateCarTuningParameter,
-    type CarTuningParams,
-  } from "$lib/stores/car-tuning-store";
   import GameTitle from "$lib/components/GameTitle.svelte";
   import GameSettings from "$lib/components/GameSettings.svelte";
   import CarTuning from "$lib/components/CarTuning.svelte";
@@ -51,25 +45,9 @@
   function toggleSettings(): void {
     showSettings = !showSettings;
   }
-
-  // Handle fullscreen toggle
-  function toggleFullscreen(): void {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else if (document.exitFullscreen) {
-      document.exitFullscreen();
-    }
-  }
 </script>
 
 <div class="fixed inset-0 flex flex-col items-center">
-  <!-- Fullscreen Button -->
-  <button
-    onclick={toggleFullscreen}
-    class="fixed top-4 left-4 px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white font-bold rounded-md transition-colors shadow-lg cursor-pointer"
-  >
-    Fullscreen
-  </button>
 
   <!-- Game Title Component -->
   <GameTitle />

@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
     import DeviceInfoDisplay from '$lib/components/DeviceInfoDisplay.svelte';
     import IngameOverlay from '$lib/components/IngameOverlay.svelte';
+    import { deviceInfo } from '$lib/stores/device-store';
 
 	// Button styles matching MainMenuOverlay
 	const buttonClass = $derived(`px-3 py-1.5 text-base font-bold transition-all duration-300 shadow-lg 
@@ -66,12 +67,14 @@
 >	
 	<!-- Game UI Overlay -->
 	<div class="absolute top-4 right-4 flex flex-col gap-2 z-10">
-		<button 
-			onclick={toggleControls}
-			class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white font-bold rounded-md transition-colors shadow-lg"
-		>
-			{showControls ? 'Hide Controls' : 'Show Controls'}
-		</button>
+		{#if !$deviceInfo.isMobile}
+			<button 
+				onclick={toggleControls}
+				class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white font-bold rounded-md transition-colors shadow-lg"
+			>
+				{showControls ? 'Hide Controls' : 'Show Controls'}
+			</button>
+		{/if}
 		
 		<!-- Only show menu button when not in menu mode -->
 		{#if $gameState.currentMode !== GameMode.MENU}
