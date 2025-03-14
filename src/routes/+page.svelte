@@ -3,6 +3,8 @@
 	import { GameMode, gameState, setGameMode } from '$lib/stores/game-state-store';
 	import MainMenuOverlay from '$lib/components/MainMenuOverlay.svelte';
 	import { onMount } from 'svelte';
+    import DeviceInfoDisplay from '$lib/components/DeviceInfoDisplay.svelte';
+    import IngameOverlay from '$lib/components/IngameOverlay.svelte';
 
 	// Button styles matching MainMenuOverlay
 	const buttonClass = $derived(`px-3 py-1.5 text-base font-bold transition-all duration-300 shadow-lg 
@@ -105,6 +107,8 @@
 	<!-- Main Menu Overlay -->
 	{#if $gameState.currentMode === GameMode.MENU}
 		<MainMenuOverlay />
+	{:else}
+		<IngameOverlay />
 	{/if}
 </div>
 
