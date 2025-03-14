@@ -98,7 +98,7 @@ export function createPhaserGame(config: GameConfig): () => void {
     },
     // Scale mode for high-DPI displays
     scale: {
-      mode: Phaser.Scale.FIT,
+      mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH
     }
   };

@@ -43,7 +43,7 @@ export class TimeTrialScene extends Phaser.Scene {
     // --- Create overlay text (to display throttle, speed, nitro, timer) ---
     this.overlayText = this.add.text(10, 10, '', {
       fontFamily: 'monospace',
-      fontSize: '28px',
+      fontSize: '14px',
       color: '#ffffff',
       backgroundColor: 'rgba(0,0,0,0.5)',
       resolution: window.devicePixelRatio || 1

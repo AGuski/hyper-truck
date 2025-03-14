@@ -43,7 +43,7 @@ export class InfiniteModeScene extends Phaser.Scene {
     // --- Create overlay text (to display throttle, speed, nitro, distance) ---
     this.overlayText = this.add.text(10, 10, '', {
       fontFamily: 'monospace',
-      fontSize: '28px',
+      fontSize: '14px',
       color: '#ffffff',
       backgroundColor: 'rgba(0,0,0,0.5)',
       resolution: window.devicePixelRatio || 1
@@ -174,7 +174,7 @@ export class InfiniteModeScene extends Phaser.Scene {
       this.cameras.main.width / 2,
       this.cameras.main.height / 4,
       driveModeText,
-      { fontFamily: 'Arial', fontSize: '24px', color: '#ffffff' }
+      { fontFamily: 'Arial', fontSize: '12px', color: '#ffffff' }
     );
     text.setOrigin(0.5);
     text.setShadow(2, 2, '#000000', 2);
@@ -214,7 +214,7 @@ export class InfiniteModeScene extends Phaser.Scene {
       'INFINITE MODE\n\nDrive as far as you can on procedurally generated terrain.\n\nUse RIGHT ARROW or D to accelerate\nUse LEFT ARROW or A to brake\nUse SHIFT for nitro boost\nPress 1-3 to change drive modes\n\nPress any key to start!',
       { 
         fontFamily: 'Arial', 
-        fontSize: '24px', 
+        fontSize: '12px', 
         color: '#ffffff',
         align: 'center'
       }

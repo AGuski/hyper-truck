@@ -90,7 +90,7 @@ export class MenuBackgroundScene extends Phaser.Scene {
     this.terrain.update(carPos.x);
     
     // --- set Fixed Zoom ---
-    this.phRenderer.updateZoom(2);
+    this.phRenderer.updateZoom(1);
 
     // --- Render the physics world ---
     this.phRenderer.clear();
