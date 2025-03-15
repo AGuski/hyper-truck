@@ -181,7 +181,9 @@ export class PhysicsRenderer {
     
     // Draw a line to show rotation for wheels
     if (body === car.getFrontWheel() || body === car.getBackWheel()) {
-      const angle = body.getAngle();
+      // In Planck.js, negative motor speed means forward rotation
+      // We need to negate the angle to make the wheel appear to rotate correctly
+      const angle = -body.getAngle();
       const lineEndX = screenCenter.x + Math.cos(angle) * scaledRadius;
       const lineEndY = screenCenter.y + Math.sin(angle) * scaledRadius;
       

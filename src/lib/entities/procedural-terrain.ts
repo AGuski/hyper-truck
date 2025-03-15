@@ -251,7 +251,7 @@ export class ProceduralTerrain {
    */
   private addBoxes(x: number, y: number): void {
     const box = new Box(0.5, 0.5);
-    const boxFD = { density: 0.8, friction: 0.4, restitution: 0.7 };
+    const boxFD = { density: 10, friction: 0.4, restitution: 0.7 };
     
     // Add a flat section for the boxes
     const groundFD = { density: 0.0, friction: this.GROUND_FRICTION };
