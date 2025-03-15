@@ -1,4 +1,6 @@
+import { deviceInfo } from '$lib/stores/device-store';
 import { Vec2 } from 'planck';
+import { get } from 'svelte/store';
 
 /**
  * Handles camera positioning, zooming, and coordinate transformations
@@ -168,7 +170,7 @@ export class CameraController {
    */
   public calculateTargetZoom(speed: number): number {
     const minZoom: number = 0.25;
-    const maxZoom: number = 1;
+    const maxZoom: number = get(deviceInfo).isMobile ? 0.5 : 1;
     const maxSpeed: number = 80;
     const speedFactor = Math.abs(speed) / (maxSpeed - 40);
     return maxZoom - (maxZoom - minZoom) * speedFactor;
